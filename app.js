@@ -1,10 +1,9 @@
 let matchPredictData = {};
 let rawCsvMatches = [];
 let donutChartInstance = null;
-
-// Tableaux de stockage pour détruire/recréer les graphiques proprement
 let rankingCharts = {};
 
+// Chargement initial des ressources
 async function loadData() {
     try {
         const jsonResponse = await fetch('./predictions_modele.json');
@@ -18,6 +17,7 @@ async function loadData() {
         
         populateTeamA();
 
+        // Chargement du classement historique de la Coupe du Monde
         const wcResponse = await fetch('./classement_historique_wc.csv');
         if (wcResponse.ok) {
             const wcText = await wcResponse.text();
@@ -28,6 +28,7 @@ async function loadData() {
     }
 }
 
+// Parseur pour results.csv
 function parseCsvData(text) {
     const lines = text.split('\n');
     for (let i = 1; i < lines.length; i++) {
@@ -47,6 +48,7 @@ function parseCsvData(text) {
     }
 }
 
+// Injection des sélections uniques dans le premier menu déroulant
 function populateTeamA() {
     const teams = new Set();
     Object.values(matchPredictData).forEach(match => {
@@ -65,6 +67,7 @@ function populateTeamA() {
     }
 }
 
+// Gestion des onglets
 function switchTab(viewId, btnElement) {
     document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -72,6 +75,7 @@ function switchTab(viewId, btnElement) {
     btnElement.classList.add('active');
 }
 
+// Filtrage dynamique du second sélecteur (Adversaires disponibles)
 function chargerAdversaires() {
     const tA = document.getElementById('teamA').value;
     const selectB = document.getElementById('teamB');
@@ -97,26 +101,32 @@ function chargerAdversaires() {
     }
 }
 
+// Rendu des calculs, de la barre linéaire et des moyennes de buts
 function afficherResultats() {
     const tA = document.getElementById('teamA').value;
     const tB = document.getElementById('teamB').value;
     const grid = document.getElementById('resultGrid');
     if (!grid || !tA || !tB) return;
+
     let matchKey = `${tA}-${tB}`;
     let inverted = false;
     if (!matchPredictData[matchKey]) { matchKey = `${tB}-${tA}`; inverted = true; }
     const predictMatch = matchPredictData[matchKey];
     if (!predictMatch) { grid.style.display = 'none'; return; }
+
     grid.style.display = 'grid';
     const stats = predictMatch.stats;
     const totalMatchs = stats.total_history;
     document.getElementById('totalMatches').textContent = totalMatchs;
+
     const probWinA = inverted ? stats.prob_team2 : stats.prob_team1;
     const probWinB = inverted ? stats.prob_team1 : stats.prob_team2;
     const probDraw = stats.prob_draw;
+
     const countWinA = Math.round((probWinA / 100) * totalMatchs);
     const countWinB = Math.round((probWinB / 100) * totalMatchs);
     const countDraw = Math.max(0, totalMatchs - countWinA - countWinB);
+
     document.getElementById('barWinA').style.width = `${probWinA}%`;
     document.getElementById('barWinA').textContent = probWinA > 0 ? `${probWinA}%` : '';
     document.getElementById('barDraw').style.width = `${probDraw}%`;
@@ -125,10 +135,24 @@ function afficherResultats() {
     document.getElementById('barWinB').textContent = probWinB > 0 ? `${probWinB}%` : '';
     document.getElementById('lblWinA').textContent = `Victoire ${tA}`;
     document.getElementById('lblWinB').textContent = `Victoire ${tB}`;
+
+    // Traitement dynamique des moyennes de buts (conserve la couleur liée)
+    const goalsContainer = document.getElementById('goalsContainer');
+    if (goalsContainer) {
+        goalsContainer.style.display = 'block';
+        const avgA = inverted ? stats.avg_goals_t2 : stats.avg_goals_t1;
+        const avgB = inverted ? stats.avg_goals_t1 : stats.avg_goals_t2;
+        document.getElementById('lblGoalTeamA').textContent = tA;
+        document.getElementById('lblGoalTeamB').textContent = tB;
+        document.getElementById('avgGoalsA').textContent = Number(avgA).toFixed(1);
+        document.getElementById('avgGoalsB').textContent = Number(avgB).toFixed(1);
+    }
+
     genererDonutChart(tA, tB, countWinA, countDraw, countWinB);
     chargerVraisScoresCsv(tA, tB);
 }
 
+// Extraction de l'historique complet des vrais scores
 function chargerVraisScoresCsv(tA, tB) {
     const listContainer = document.getElementById('matchHistoryList');
     listContainer.innerHTML = '';
@@ -151,7 +175,7 @@ function chargerVraisScoresCsv(tA, tB) {
     });
 }
 
-// MANAGEMENT DU CLASSEMENT ET DES GRAPHQUES TOP 10
+// Construction de l'onglet classement et tri des 4 Top 10
 function traiterEtAfficherDonneesWC(csvText) {
     const tbody = document.getElementById('rankingTableBody');
     if (!tbody) return;
@@ -178,10 +202,8 @@ function traiterEtAfficherDonneesWC(csvText) {
             const groupe = cols[11] ? cols[11].trim() : '—';
             const titres = cols[12] ? parseInt(cols[12]) : 0;
 
-            const itemEquipe = { indexRang, equipe, pj, v, n, d, bf, bc, db, pts, groupe, titres };
-            listeEquipesCompletes.push(itemEquipe);
+            listeEquipesCompletes.push({ indexRang, equipe, pj, v, n, d, bf, bc, db, pts, groupe, titres });
 
-            // Injection dynamique des lignes du tableau principal
             let etoilesHtml = titres > 0 ? `<span class="star-container">🏆 x${titres}</span>` : '';
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -205,39 +227,29 @@ function traiterEtAfficherDonneesWC(csvText) {
         }
     }
 
-    // GENERATION DES GRAPHQUES TOP 10
+    // Instanciation unifiée des graphiques Top 10
     creerBarChart('chartTitres', 'Titres', [...listeEquipesCompletes].sort((a,b) => b.titres - a.titres).slice(0, 10), 'titres', '#f1c40f');
     creerBarChart('chartPoints', 'Points', [...listeEquipesCompletes].sort((a,b) => b.pts - a.pts).slice(0, 10), 'pts', '#3498db');
     creerBarChart('chartVictoires', 'Victoires', [...listeEquipesCompletes].sort((a,b) => b.v - a.v).slice(0, 10), 'v', '#2ecc71');
     creerBarChart('chartDiff', 'Diff.', [...listeEquipesCompletes].sort((a,b) => b.db - a.db).slice(0, 10), 'db', '#e67e22');
 }
 
-// Fonction générique pour créer un graphique à barres horizontales épuré
+// Fonction utilitaire de rendu des graphiques barres horizontaux
 function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
     const ctx = document.getElementById(canvasId).getContext('2d');
-    
     if (rankingCharts[canvasId]) rankingCharts[canvasId].destroy();
 
     rankingCharts[canvasId] = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: dataList.map(d => d.equipe),
-            datasets: [{
-                label: labelLabel,
-                data: dataList.map(d => d[objectKey]),
-                backgroundColor: color,
-                borderRadius: 4,
-                barThickness: 12
-            }]
+            datasets: [{ label: labelLabel, data: dataList.map(d => d[objectKey]), backgroundColor: color, borderRadius: 4, barThickness: 12 }]
         },
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { backgroundColor: '#152238', titleColor: '#fff', bodyColor: '#6b7c96' }
-            },
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#152238', titleColor: '#fff', bodyColor: '#6b7c96' } },
             scales: {
                 x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b7c96', font: { size: 10 } } },
                 y: { ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
@@ -246,6 +258,7 @@ function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
     });
 }
 
+// Graphique circulaire (Donut)
 function genererDonutChart(teamA, teamB, winA, draw, winB) {
     const ctx = document.getElementById('donutChart').getContext('2d');
     if (donutChartInstance) donutChartInstance.destroy();
