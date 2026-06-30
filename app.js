@@ -2,6 +2,9 @@ let matchPredictData = {};
 let rawCsvMatches = [];
 let donutChartInstance = null;
 
+// Tableaux de stockage pour détruire/recréer les graphiques proprement
+let rankingCharts = {};
+
 async function loadData() {
     try {
         const jsonResponse = await fetch('./predictions_modele.json');
@@ -15,11 +18,10 @@ async function loadData() {
         
         populateTeamA();
 
-        // CHARGEMENT DU NOUVEAU CLASSEMENT HISTORIQUE WC
         const wcResponse = await fetch('./classement_historique_wc.csv');
         if (wcResponse.ok) {
             const wcText = await wcResponse.text();
-            afficherVraiClassementWC(wcText);
+            traiterEtAfficherDonneesWC(wcText);
         }
     } catch (error) {
         console.error("Erreur critique lors de l'initialisation :", error);
@@ -149,41 +151,38 @@ function chargerVraisScoresCsv(tA, tB) {
     });
 }
 
-// ROUTINE DE RENDU DU NOUVEAU TABLEAU (IMAGE 80E65E)
-function afficherVraiClassementWC(csvText) {
+// MANAGEMENT DU CLASSEMENT ET DES GRAPHQUES TOP 10
+function traiterEtAfficherDonneesWC(csvText) {
     const tbody = document.getElementById('rankingTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
     const lines = csvText.split('\n');
+    let listeEquipesCompletes = [];
     
-    // Entêtes attendus : ,equipe,PJ,V,N,D,BF,BC,DB,PTS,taux_V,groupe,titres,finales,annees_titres
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
-        
-        // Utilisation d'une regex pour isoler correctement les virgules (notamment pour la liste d'années de titres)
         const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         
         if (cols.length >= 10) {
             const indexRang = cols[0].trim();
             const equipe = cols[1].replace(/"/g, '').trim();
-            const pj = cols[2].trim();
-            const v = cols[3].trim();
-            const n = cols[4].trim();
-            const d = cols[5].trim();
-            const bf = cols[6].trim();
-            const bc = cols[7].trim();
-            const db = cols[8].trim();
-            const pts = cols[9].trim();
+            const pj = parseInt(cols[2].trim()) || 0;
+            const v = parseInt(cols[3].trim()) || 0;
+            const n = parseInt(cols[4].trim()) || 0;
+            const d = parseInt(cols[5].trim()) || 0;
+            const bf = parseInt(cols[6].trim()) || 0;
+            const bc = parseInt(cols[7].trim()) || 0;
+            const db = parseInt(cols[8].trim()) || 0;
+            const pts = parseInt(cols[9].trim()) || 0;
             const groupe = cols[11] ? cols[11].trim() : '—';
             const titres = cols[12] ? parseInt(cols[12]) : 0;
 
-            // Fabrique des étoiles s'il y a des titres de champion
-            let etoilesHtml = '';
-            if (titres > 0) {
-                etoilesHtml = `<span class="star-container">🏆 x${titres}</span>`;
-            }
+            const itemEquipe = { indexRang, equipe, pj, v, n, d, bf, bc, db, pts, groupe, titres };
+            listeEquipesCompletes.push(itemEquipe);
 
+            // Injection dynamique des lignes du tableau principal
+            let etoilesHtml = titres > 0 ? `<span class="star-container">🏆 x${titres}</span>` : '';
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="rank-col">#${indexRang}</td>
@@ -200,11 +199,51 @@ function afficherVraiClassementWC(csvText) {
                 <td>${d}</td>
                 <td class="hide-mobile">${bf}</td>
                 <td class="hide-mobile">${bc}</td>
-                <td style="font-weight:600; color:${parseInt(db) >= 0 ? '#2ecc71' : '#e74c3c'}">${parseInt(db) >= 0 ? '+' : ''}${db}</td>
+                <td style="font-weight:600; color:${db >= 0 ? '#2ecc71' : '#e74c3c'}">${db >= 0 ? '+' : ''}${db}</td>
             `;
             tbody.appendChild(tr);
         }
     }
+
+    // GENERATION DES GRAPHQUES TOP 10
+    creerBarChart('chartTitres', 'Titres', [...listeEquipesCompletes].sort((a,b) => b.titres - a.titres).slice(0, 10), 'titres', '#f1c40f');
+    creerBarChart('chartPoints', 'Points', [...listeEquipesCompletes].sort((a,b) => b.pts - a.pts).slice(0, 10), 'pts', '#3498db');
+    creerBarChart('chartVictoires', 'Victoires', [...listeEquipesCompletes].sort((a,b) => b.v - a.v).slice(0, 10), 'v', '#2ecc71');
+    creerBarChart('chartDiff', 'Diff.', [...listeEquipesCompletes].sort((a,b) => b.db - a.db).slice(0, 10), 'db', '#e67e22');
+}
+
+// Fonction générique pour créer un graphique à barres horizontales épuré
+function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    if (rankingCharts[canvasId]) rankingCharts[canvasId].destroy();
+
+    rankingCharts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dataList.map(d => d.equipe),
+            datasets: [{
+                label: labelLabel,
+                data: dataList.map(d => d[objectKey]),
+                backgroundColor: color,
+                borderRadius: 4,
+                barThickness: 12
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: '#152238', titleColor: '#fff', bodyColor: '#6b7c96' }
+            },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b7c96', font: { size: 10 } } },
+                y: { ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
+            }
+        }
+    });
 }
 
 function genererDonutChart(teamA, teamB, winA, draw, winB) {
