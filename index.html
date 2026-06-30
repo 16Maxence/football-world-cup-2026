@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historique de Face à Face</title>
-    <!-- Chargement de Chart.js pour le graphique en anneau -->
+    <title>Historique de Face à Face - FIFA 26</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -159,7 +158,7 @@
             font-size: 12px;
             font-weight: bold;
             color: #000;
-            transition: width 0.5s ease;
+            transition: width 0.3s ease;
         }
 
         .prob-win-a { background-color: var(--color-win); }
@@ -180,21 +179,18 @@
     <h1>Historique de face à face</h1>
     <div class="subtitle">Historique de confrontations directes entre deux sélections</div>
 
-    <!-- Sélecteurs d'équipes -->
     <div class="selector-zone">
-        <select id="teamA" onchange="mettreAJourMatch()">
+        <select id="teamA" onchange="chargerAdversaires()">
             <option value="">Sélectionner Équipe</option>
         </select>
         <div class="vs-label">VS</div>
-        <select id="teamB" onchange="mettreAJourMatch()">
+        <select id="teamB" onchange="afficherResultats()">
             <option value="">Sélectionner Équipe</option>
         </select>
     </div>
 
-    <!-- Zone des résultats -->
     <div class="main-grid" id="resultGrid">
         
-        <!-- Bloc de Gauche : Nombre total de matchs -->
         <div class="card">
             <div class="card-title">Total des matchs joués</div>
             <div class="total-box">
@@ -203,7 +199,6 @@
             </div>
         </div>
 
-        <!-- Bloc de Droite : Graphique & Analyse -->
         <div class="card">
             <div class="card-title">Résultats (Donut)</div>
             
@@ -211,7 +206,6 @@
                 <canvas id="donutChart"></canvas>
             </div>
 
-            <!-- Barre de probabilités type ELO en bas -->
             <div class="elo-section">
                 <div class="elo-header">🎯 Analyse des probabilités pour un match hypothétique</div>
                 <div class="prob-bar">
