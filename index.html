@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique de Face à Face</title>
+    <!-- Chargement de Chart.js pour le graphique en anneau -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1b2a;
+            --card-bg: #152238;
+            --text-main: #ffffff;
+            --text-muted: #6b7c96;
+            --accent-yellow: #f1c40f;
+            --color-win: #2ecc71;
+            --color-draw: #f39c12;
+            --color-loss: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 30px;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-yellow);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        /* Zone de sélection des équipes */
+        .selector-zone {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        select {
+            background-color: #0d1b2a;
+            color: white;
+            border: 1px solid #2c3e50;
+            padding: 12px 20px;
+            font-size: 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 250px;
+        }
+
+        .vs-label {
+            color: var(--accent-yellow);
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        /* Grille principale (Masquée par défaut avant sélection) */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            display: none; 
+        }
+
+        @media (max-width: 768px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 25px;
+            box-sizing: border-box;
+        }
+
+        .card-title {
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* Colonne Gauche : Total Matchs */
+        .total-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            min-height: 250px;
+        }
+
+        .total-number {
+            font-size: 72px;
+            font-weight: bold;
+            color: var(--accent-yellow);
+            line-height: 1;
+        }
+
+        /* Colonne Droite : Donut & Barre de probabilités */
+        .donut-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 30px auto;
+        }
+
+        /* Section Analyse ELO du bas */
+        .elo-section {
+            border-top: 1px solid #2c3e50;
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+
+        .elo-header {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Barre de probabilités horizontale */
+        .prob-bar {
+            display: flex;
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .prob-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
+            transition: width 0.5s ease;
+        }
+
+        .prob-win-a { background-color: var(--color-win); }
+        .prob-draw { background-color: var(--color-draw); }
+        .prob-win-b { background-color: var(--color-loss); }
+
+        .prob-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h1>Historique de face à face</h1>
+    <div class="subtitle">Historique de confrontations directes entre deux sélections</div>
+
+    <!-- Sélecteurs d'équipes -->
+    <div class="selector-zone">
+        <select id="teamA" onchange="mettreAJourMatch()">
+            <option value="">Sélectionner Équipe</option>
+        </select>
+        <div class="vs-label">VS</div>
+        <select id="teamB" onchange="mettreAJourMatch()">
+            <option value="">Sélectionner Équipe</option>
+        </select>
+    </div>
+
+    <!-- Zone des résultats -->
+    <div class="main-grid" id="resultGrid">
+        
+        <!-- Bloc de Gauche : Nombre total de matchs -->
+        <div class="card">
+            <div class="card-title">Total des matchs joués</div>
+            <div class="total-box">
+                <div class="total-number" id="totalMatches">0</div>
+                <div style="color: var(--text-muted); margin-top: 15px;">Matchs dans l'historique</div>
+            </div>
+        </div>
+
+        <!-- Bloc de Droite : Graphique & Analyse -->
+        <div class="card">
+            <div class="card-title">Résultats (Donut)</div>
+            
+            <div class="donut-container">
+                <canvas id="donutChart"></canvas>
+            </div>
+
+            <!-- Barre de probabilités type ELO en bas -->
+            <div class="elo-section">
+                <div class="elo-header">🎯 Analyse des probabilités pour un match hypothétique</div>
+                <div class="prob-bar">
+                    <div id="barWinA" class="prob-segment prob-win-a" style="width: 33.3%"></div>
+                    <div id="barDraw" class="prob-segment prob-draw" style="width: 33.3%"></div>
+                    <div id="barWinB" class="prob-segment prob-win-b" style="width: 33.4%"></div>
+                </div>
+                <div class="prob-labels">
+                    <span id="lblWinA">Victoire Équipe A</span>
+                    <span>Match nul</span>
+                    <span id="lblWinB">Victoire Équipe B</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
