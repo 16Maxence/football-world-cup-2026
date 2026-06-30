@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historique de Face à Face - FIFA 26</title>
+    <title>World Cup 2026 - Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -15,6 +15,7 @@
             --color-win: #2ecc71;
             --color-draw: #f39c12;
             --color-loss: #e74c3c;
+            --gold-gradient: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
         }
 
         body {
@@ -30,20 +31,71 @@
             margin: 0 auto;
         }
 
-        h1 {
-            font-size: 28px;
+        /* Titre Doré Brillant */
+        .gold-title {
+            font-size: 42px;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--accent-yellow);
-            margin-bottom: 5px;
+            letter-spacing: 2px;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 10px rgba(170, 119, 28, 0.2);
+            margin: 0 0 5px 0;
+            text-align: center;
         }
 
         .subtitle {
             color: var(--text-muted);
             font-size: 14px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+            text-align: center;
         }
 
+        /* Barre d'onglets style boutons */
+        .tabs-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #1e2d42;
+            padding-bottom: 15px;
+        }
+
+        .tab-btn {
+            background-color: #1a2a40;
+            color: var(--text-muted);
+            border: 1px solid #2c3e50;
+            padding: 12px 25px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .tab-btn:hover {
+            color: white;
+            background-color: #223754;
+        }
+
+        .tab-btn.active {
+            background: var(--gold-gradient);
+            color: #0d1b2a;
+            border-color: transparent;
+            box-shadow: 0px 4px 12px rgba(187, 149, 63, 0.4);
+        }
+
+        /* Gestion des vues */
+        .view-section {
+            display: none;
+        }
+        .view-section.active {
+            display: block;
+        }
+
+        /* Styles Zone Sélecteurs (H2H) */
         .selector-zone {
             background-color: var(--card-bg);
             padding: 20px;
@@ -81,6 +133,7 @@
 
         @media (max-width: 768px) {
             .main-grid { grid-template-columns: 1fr; }
+            .ranking-table th:nth-child(4), .ranking-table td:nth-child(4) { display: none; }
         }
 
         .card {
@@ -167,7 +220,6 @@
             color: var(--text-muted);
         }
 
-        /* Liste des scores réels */
         .history-list {
             margin-top: 20px;
             display: flex;
@@ -193,16 +245,8 @@
         .history-item.draw { border-left-color: var(--color-draw); }
         .history-item.loss { border-left-color: var(--color-loss); }
 
-        .match-meta {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .match-teams {
-            font-weight: 500;
-        }
-        
+        .match-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .match-teams { font-weight: 500; }
         .match-score {
             font-weight: bold;
             background-color: #152238;
@@ -213,57 +257,128 @@
             font-family: monospace;
             font-size: 15px;
         }
+
+        /* Style spécifique pour le tableau Classement */
+        .ranking-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 25px;
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        .ranking-table th {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+            padding: 12px 10px;
+            border-bottom: 2px solid #2c3e50;
+        }
+
+        .ranking-table td {
+            padding: 14px 10px;
+            border-bottom: 1px solid #1e2d42;
+            font-size: 15px;
+        }
+
+        .ranking-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .rank-number {
+            font-weight: bold;
+            color: var(--accent-yellow);
+            width: 40px;
+        }
+
+        .badge-points {
+            font-weight: bold;
+            color: var(--color-win);
+        }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
-    <h1>Historique de face à face</h1>
-    <div class="subtitle">Historique de confrontations directes réelles et statistiques prédictives</div>
+    <h1 class="gold-title">World Cup 2026</h1>
+    <div class="subtitle">Statistiques d'analyse prédictive et performances historiques mondiales</div>
 
-    <div class="selector-zone">
-        <select id="teamA" onchange="chargerAdversaires()">
-            <option value="">Sélectionner Équipe</option>
-        </select>
-        <div class="vs-label">VS</div>
-        <select id="teamB" onchange="afficherResultats()">
-            <option value="">Sélectionner Équipe</option>
-        </select>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('h2h-view', this)">⚔️ Face à Face</button>
+        <button class="tab-btn" onclick="switchTab('ranking-view', this)">📊 Classement Général</button>
     </div>
 
-    <div class="main-grid" id="resultGrid">
-        <div class="card">
-            <div class="card-title">Total des matchs joués</div>
-            <div class="total-box">
-                <div class="total-number" id="totalMatches">0</div>
-                <div style="color: var(--text-muted); margin-top: 15px;">Matchs enregistrés dans le CSV</div>
-            </div>
+    <div id="h2h-view" class="view-section active">
+        <div class="selector-zone">
+            <select id="teamA" onchange="chargerAdversaires()">
+                <option value="">Sélectionner Équipe</option>
+            </select>
+            <div class="vs-label">VS</div>
+            <select id="teamB" onchange="afficherResultats()">
+                <option value="">Sélectionner Équipe</option>
+            </select>
         </div>
 
-        <div class="card">
-            <div class="card-title">Résultats (Donut)</div>
-            <div class="donut-container">
-                <canvas id="donutChart"></canvas>
-            </div>
-
-            <div class="elo-section">
-                <div class="elo-header">🎯 Analyse des probabilités théoriques du modèle</div>
-                <div class="prob-bar">
-                    <div id="barWinA" class="prob-segment prob-win-a"></div>
-                    <div id="barDraw" class="prob-segment prob-draw"></div>
-                    <div id="barWinB" class="prob-segment prob-win-b"></div>
-                </div>
-                <div class="prob-labels">
-                    <span id="lblWinA">Victoire Équipe A</span>
-                    <span>Match nul</span>
-                    <span id="lblWinB">Victoire Équipe B</span>
+        <div class="main-grid" id="resultGrid">
+            <div class="card">
+                <div class="card-title">Total des matchs joués</div>
+                <div class="total-box">
+                    <div class="total-number" id="totalMatches">0</div>
+                    <div style="color: var(--text-muted); margin-top: 15px;">Matchs enregistrés dans l'historique</div>
                 </div>
             </div>
 
-            <div class="elo-section" style="border-top: 1px solid #2c3e50; margin-top: 25px; padding-top: 15px;">
-                <div class="elo-header">📜 Vrais scores des dernières confrontations (CSV)</div>
-                <div id="matchHistoryList" class="history-list"></div>
+            <div class="card">
+                <div class="card-title">Résultats (Donut)</div>
+                <div class="donut-container">
+                    <canvas id="donutChart"></canvas>
+                </div>
+
+                <div class="elo-section">
+                    <div class="elo-header">🎯 Analyse des probabilités théoriques du modèle</div>
+                    <div class="prob-bar">
+                        <div id="barWinA" class="prob-segment prob-win-a"></div>
+                        <div id="barDraw" class="prob-segment prob-draw"></div>
+                        <div id="barWinB" class="prob-segment prob-win-b"></div>
+                    </div>
+                    <div class="prob-labels">
+                        <span id="lblWinA">Victoire Équipe A</span>
+                        <span>Match nul</span>
+                        <span id="lblWinB">Victoire Équipe B</span>
+                    </div>
+                </div>
+
+                <div class="elo-section" style="border-top: 1px solid #2c3e50; margin-top: 25px; padding-top: 15px;">
+                    <div class="elo-header">📜 Vrais scores des dernières confrontations (CSV)</div>
+                    <div id="matchHistoryList" class="history-list"></div>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <div id="ranking-view" class="view-section">
+        <div class="ranking-card">
+            <div class="card-title">Classement mondial historique basé sur le CSV</div>
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>Rang</th>
+                        <th>Sélection</th>
+                        <th>Matchs</th>
+                        <th>V — N — D</th>
+                        <th>Buts</th>
+                        <th>Points Globaux</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingTableBody">
+                    </tbody>
+            </table>
         </div>
     </div>
 </div>
