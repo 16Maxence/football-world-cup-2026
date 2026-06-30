@@ -44,7 +44,6 @@
             margin-bottom: 30px;
         }
 
-        /* Zone de sélection des équipes */
         .selector-zone {
             background-color: var(--card-bg);
             padding: 20px;
@@ -73,12 +72,11 @@
             font-size: 20px;
         }
 
-        /* Grille principale (Masquée par défaut avant sélection) */
         .main-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 25px;
-            display: none; 
+            display: none; /* Géré par le JS */
         }
 
         @media (max-width: 768px) {
@@ -100,7 +98,6 @@
             margin-bottom: 20px;
         }
 
-        /* Colonne Gauche : Total Matchs */
         .total-box {
             display: flex;
             flex-direction: column;
@@ -117,15 +114,13 @@
             line-height: 1;
         }
 
-        /* Colonne Droite : Donut & Barre de probabilités */
         .donut-container {
             position: relative;
-            width: 220px;
+            width: 100%;
             height: 220px;
             margin: 0 auto 30px auto;
         }
 
-        /* Section Analyse ELO du bas */
         .elo-section {
             border-top: 1px solid #2c3e50;
             margin-top: 20px;
@@ -137,18 +132,15 @@
             text-transform: uppercase;
             color: var(--text-muted);
             margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
         }
 
-        /* Barre de probabilités horizontale */
         .prob-bar {
             display: flex;
             height: 24px;
             border-radius: 4px;
             overflow: hidden;
             margin-bottom: 8px;
+            background-color: #1a2f4c;
         }
 
         .prob-segment {
@@ -158,7 +150,8 @@
             font-size: 12px;
             font-weight: bold;
             color: #000;
-            transition: width 0.3s ease;
+            width: 0%;
+            transition: width 0.4s ease;
         }
 
         .prob-win-a { background-color: var(--color-win); }
@@ -209,9 +202,9 @@
             <div class="elo-section">
                 <div class="elo-header">🎯 Analyse des probabilités pour un match hypothétique</div>
                 <div class="prob-bar">
-                    <div id="barWinA" class="prob-segment prob-win-a" style="width: 33.3%"></div>
-                    <div id="barDraw" class="prob-segment prob-draw" style="width: 33.3%"></div>
-                    <div id="barWinB" class="prob-segment prob-win-b" style="width: 33.4%"></div>
+                    <div id="barWinA" class="prob-segment prob-win-a"></div>
+                    <div id="barDraw" class="prob-segment prob-draw"></div>
+                    <div id="barWinB" class="prob-segment prob-win-b"></div>
                 </div>
                 <div class="prob-labels">
                     <span id="lblWinA">Victoire Équipe A</span>
