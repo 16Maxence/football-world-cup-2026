@@ -202,6 +202,16 @@
             width: 100%;
         }
 
+        /* Conteneurs pour Tableaux Doubles */
+        .split-ranking-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+        @media (max-width: 992px) {
+            .split-ranking-grid { grid-template-columns: 1fr; }
+        }
+
         /* Tableau Classement */
         .ranking-card {
             background-color: var(--card-bg);
@@ -294,7 +304,7 @@
 
     <div class="tabs-container">
         <button class="tab-btn active" onclick="switchTab('h2h-view', this)">⚔️ Face à Face</button>
-        <button class="tab-btn" onclick="switchTab('ranking-view', this)">📊 Classement Coupe du Monde</button>
+        <button class="tab-btn" onclick="switchTab('ranking-view', this); loadLiveRankingAndScorers();">📊 Classement & Buteurs</button>
         <button class="tab-btn" onclick="switchTab('backtest-view', this); loadApiBacktestData();">📈 Modèle vs Réalité (API)</button>
     </div>
 
@@ -378,24 +388,44 @@
             </div>
         </div>
 
-        <div class="ranking-card">
-            <table class="ranking-table">
-                <thead>
-                    <tr>
-                        <th class="rank-col">Rang</th>
-                        <th class="align-left">Sélection</th>
-                        <th class="pts-col">Pts</th>
-                        <th>J.</th>
-                        <th>G.</th>
-                        <th>N.</th>
-                        <th>P.</th>
-                        <th class="hide-mobile">Bp</th>
-                        <th class="hide-mobile">Bc</th>
-                        <th>Diff.</th>
-                    </tr>
-                </thead>
-                <tbody id="rankingTableBody"></tbody>
-            </table>
+        <div class="split-ranking-grid">
+            <div class="ranking-card">
+                <div style="font-weight: bold; font-size: 14px; text-transform: uppercase; margin-bottom: 15px; color: var(--accent-yellow);">📋 Classement Général des Groupes (API / Historique)</div>
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th class="rank-col">Rang</th>
+                            <th class="align-left">Sélection</th>
+                            <th class="pts-col">Pts</th>
+                            <th>J.</th>
+                            <th>G.</th>
+                            <th>N.</th>
+                            <th>P.</th>
+                            <th class="hide-mobile">Bp</th>
+                            <th class="hide-mobile">Bc</th>
+                            <th>Diff.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="ranking-card">
+                <div style="font-weight: bold; font-size: 14px; text-transform: uppercase; margin-bottom: 15px; color: #2ecc71;">⚽ Meilleurs Marqueurs (Live API)</div>
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th class="align-left">Joueur</th>
+                            <th class="align-left">Équipe</th>
+                            <th style="color: var(--accent-yellow);">Buts</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scorersTableBody">
+                        <tr><td colspan="4" style="color: var(--text-muted); padding: 20px;">Chargement des données buteurs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
