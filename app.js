@@ -1,18 +1,18 @@
 let matchData = {};
 let donutChartInstance = null;
 
-// 1. Charger le JSON au démarrage et remplir le sélecteur de gauche (Équipe A)
+// 1. Charger le JSON au démarrage
 async function loadData() {
     try {
-        const response = await fetch('predictions_modele.json'); // Nom de votre fichier JSON
+        const response = await fetch('predictions_modele.json');
         matchData = await response.json();
         populateTeamA();
     } catch (error) {
-        console.error("Erreur de chargement du JSON :", error);
+        console.error("Erreur critique lors du chargement du fichier JSON :", error);
     }
 }
 
-// Remplir le premier sélecteur (Gauche) avec toutes les équipes uniques disponibles
+// Remplir le premier sélecteur (Gauche)
 function populateTeamA() {
     const teams = new Set();
     Object.values(matchData).forEach(match => {
@@ -23,25 +23,31 @@ function populateTeamA() {
     const sortedTeams = Array.from(teams).sort();
     const selectA = document.getElementById('teamA');
     
-    selectA.innerHTML = '<option value="">Sélectionner Équipe</option>';
-    sortedTeams.forEach(team => {
-        let opt = document.createElement('option');
-        opt.value = team; 
-        opt.textContent = team;
-        selectA.appendChild(opt);
-    });
-
-    // Initialiser le sélecteur B comme vide au départ
-    document.getElementById('teamB').innerHTML = '<option value="">Sélectionner Équipe</option>';
+    if (selectA) {
+        selectA.innerHTML = '<option value="">Sélectionner Équipe</option>';
+        sortedTeams.forEach(team => {
+            let opt = document.createElement('option');
+            opt.value = team; 
+            opt.textContent = team;
+            selectA.appendChild(opt);
+        });
+    }
+    
+    const selectB = document.getElementById('teamB');
+    if (selectB) {
+        selectB.innerHTML = '<option value="">Sélectionner Équipe</option>';
+    }
 }
 
-// 2. ÉTAPE 1 : Appelé dès qu'on change l'Équipe Gauche (Sélectionne et filtre ses adversaires)
+// 2. Filtrer l'équipe de droite et forcer l'affichage du premier élément trouvé
 function chargerAdversaires() {
     const tA = document.getElementById('teamA').value;
     const selectB = document.getElementById('teamB');
     const grid = document.getElementById('resultGrid');
 
-    // On cache le tableau de bord tant que l'adversaire n'est pas sélectionné
+    if (!grid || !selectB) return;
+
+    // Masquer la grille en attendant la configuration
     grid.style.display = 'none';
 
     if (!tA) {
@@ -51,7 +57,6 @@ function chargerAdversaires() {
 
     const adversaires = new Set();
 
-    // On cherche dans le JSON tous les pays qui ont partagé un match avec l'équipe A
     Object.values(matchData).forEach(match => {
         if (match.team_a === tA) {
             adversaires.add(match.team_b);
@@ -60,9 +65,8 @@ function chargerAdversaires() {
         }
     });
 
-    // Remplir le sélecteur de droite (Équipe B) uniquement avec les adversaires trouvés
     const sortedAdversaires = Array.from(adversaires).sort();
-    selectB.innerHTML = '<option value="">Sélectionner Équipe</option>';
+    selectB.innerHTML = '';
     
     sortedAdversaires.forEach(team => {
         let opt = document.createElement('option');
@@ -70,20 +74,26 @@ function chargerAdversaires() {
         opt.textContent = team;
         selectB.appendChild(opt);
     });
+
+    // Sélectionne automatiquement le premier adversaire et affiche les résultats directement
+    if (sortedAdversaires.length > 0) {
+        selectB.value = sortedAdversaires[0];
+        afficherResultats();
+    }
 }
 
-// 3. ÉTAPE 2 : Appelé dès qu'on choisit l'Équipe Droite (Affiche les résultats)
+// 3. Traiter les données et générer l'UI sans crash
 function afficherResultats() {
     const tA = document.getElementById('teamA').value;
     const tB = document.getElementById('teamB').value;
     const grid = document.getElementById('resultGrid');
 
+    if (!grid) return;
     if (!tA || !tB) {
         grid.style.display = 'none';
         return;
     }
 
-    // Déterminer si la clé est inversée dans le dictionnaire JSON
     let matchKey = `${tA}-${tB}`;
     let inverted = false;
 
@@ -93,46 +103,52 @@ function afficherResultats() {
     }
 
     const match = matchData[matchKey];
-    if (!match) return;
+    if (!match) {
+        grid.style.display = 'none';
+        return;
+    }
 
-    // Rendre la grille visible
+    // Afficher la grille
     grid.style.display = 'grid';
 
     const stats = match.stats;
     const totalMatchs = stats.total_history;
+    
     document.getElementById('totalMatches').textContent = totalMatchs;
 
-    // Inversion des probabilités selon le sens sélectionné à l'écran
+    // Inversion intelligente selon l'ordre à l'écran
     const probWinA = inverted ? stats.prob_team2 : stats.prob_team1;
     const probWinB = inverted ? stats.prob_team1 : stats.prob_team2;
     const probDraw = stats.prob_draw;
 
-    // Distribution des victoires/nuls/défaites pour alimenter le graphique Donut
     const countWinA = Math.round((probWinA / 100) * totalMatchs);
     const countWinB = Math.round((probWinB / 100) * totalMatchs);
     const countDraw = Math.max(0, totalMatchs - countWinA - countWinB);
 
-    // Mise à jour visuelle de la barre de progression horizontale
+    // Attribution sécurisée des largeurs de barres
     document.getElementById('barWinA').style.width = `${probWinA}%`;
     document.getElementById('barWinA').textContent = probWinA > 0 ? `${probWinA}%` : '';
+    
     document.getElementById('barDraw').style.width = `${probDraw}%`;
     document.getElementById('barDraw').textContent = probDraw > 0 ? `${probDraw}%` : '';
+    
     document.getElementById('barWinB').style.width = `${probWinB}%`;
     document.getElementById('barWinB').textContent = probWinB > 0 ? `${probWinB}%` : '';
 
-    // Labels sous la barre
     document.getElementById('lblWinA').textContent = `Victoire ${tA}`;
     document.getElementById('lblWinB').textContent = `Victoire ${tB}`;
 
-    // Création ou rafraîchissement complet du Donut Chart.js
+    // Lancer Chart.js
     genererDonutChart(tA, tB, countWinA, countDraw, countWinB);
 }
 
-// 4. Fonction de rendu du graphique Donut
+// 4. Dessiner le Donut Chart
 function genererDonutChart(teamA, teamB, winA, draw, winB) {
-    const ctx = document.getElementById('donutChart').getContext('2d');
+    const canvas = document.getElementById('donutChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
 
-    // On détruit l'ancienne instance si elle existe pour éviter les conflits au survol de la souris
     if (donutChartInstance) {
         donutChartInstance.destroy();
     }
@@ -161,5 +177,5 @@ function genererDonutChart(teamA, teamB, winA, draw, winB) {
     });
 }
 
-// Exécution automatique au démarrage
+// Déclenchement propre au chargement complet
 window.onload = loadData;
