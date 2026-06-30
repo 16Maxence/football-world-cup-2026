@@ -1,18 +1,23 @@
 let matchData = {};
 let donutChartInstance = null;
 
-// 1. Charger le JSON au démarrage
+// 1. Charger les données
 async function loadData() {
     try {
-        const response = await fetch('predictions_modele.json');
+        // Appelle le fichier situé à la racine du projet
+        const response = await fetch('./predictions_modele.json');
+        if (!response.ok) {
+            throw new Error(`Fichier introuvable (Code HTTP ${response.status})`);
+        }
         matchData = await response.json();
         populateTeamA();
     } catch (error) {
-        console.error("Erreur critique lors du chargement du fichier JSON :", error);
+        console.error("Erreur critique de chargement JSON :", error);
+        alert("Impossible de charger le fichier 'predictions_modele.json'. Vérifie qu'il est bien présent à côté du fichier index.html.");
     }
 }
 
-// Remplir le premier sélecteur (Gauche)
+// Remplir le menu déroulant de gauche (Équipe A)
 function populateTeamA() {
     const teams = new Set();
     Object.values(matchData).forEach(match => {
@@ -32,14 +37,9 @@ function populateTeamA() {
             selectA.appendChild(opt);
         });
     }
-    
-    const selectB = document.getElementById('teamB');
-    if (selectB) {
-        selectB.innerHTML = '<option value="">Sélectionner Équipe</option>';
-    }
 }
 
-// 2. Filtrer l'équipe de droite et forcer l'affichage du premier élément trouvé
+// 2. Action au choix de l'équipe de gauche
 function chargerAdversaires() {
     const tA = document.getElementById('teamA').value;
     const selectB = document.getElementById('teamB');
@@ -47,8 +47,7 @@ function chargerAdversaires() {
 
     if (!grid || !selectB) return;
 
-    // Masquer la grille en attendant la configuration
-    grid.style.display = 'none';
+    grid.style.display = 'none'; // Masquer les anciens graphiques pendant la transition
 
     if (!tA) {
         selectB.innerHTML = '<option value="">Sélectionner Équipe</option>';
@@ -57,6 +56,7 @@ function chargerAdversaires() {
 
     const adversaires = new Set();
 
+    // Trouver tous les adversaires valides
     Object.values(matchData).forEach(match => {
         if (match.team_a === tA) {
             adversaires.add(match.team_b);
@@ -75,28 +75,25 @@ function chargerAdversaires() {
         selectB.appendChild(opt);
     });
 
-    // Sélectionne automatiquement le premier adversaire et affiche les résultats directement
+    // Auto-sélection du premier adversaire trouvé et affichage direct
     if (sortedAdversaires.length > 0) {
         selectB.value = sortedAdversaires[0];
         afficherResultats();
     }
 }
 
-// 3. Traiter les données et générer l'UI sans crash
+// 3. Calculs et construction visuelle
 function afficherResultats() {
     const tA = document.getElementById('teamA').value;
     const tB = document.getElementById('teamB').value;
     const grid = document.getElementById('resultGrid');
 
-    if (!grid) return;
-    if (!tA || !tB) {
-        grid.style.display = 'none';
-        return;
-    }
+    if (!grid || !tA || !tB) return;
 
     let matchKey = `${tA}-${tB}`;
     let inverted = false;
 
+    // Ajustement de l'index dictionnaire
     if (!matchData[matchKey]) {
         matchKey = `${tB}-${tA}`;
         inverted = true;
@@ -108,15 +105,13 @@ function afficherResultats() {
         return;
     }
 
-    // Afficher la grille
     grid.style.display = 'grid';
 
     const stats = match.stats;
     const totalMatchs = stats.total_history;
-    
     document.getElementById('totalMatches').textContent = totalMatchs;
 
-    // Inversion intelligente selon l'ordre à l'écran
+    // Gestion du sens d'inversion des données pour l'affichage
     const probWinA = inverted ? stats.prob_team2 : stats.prob_team1;
     const probWinB = inverted ? stats.prob_team1 : stats.prob_team2;
     const probDraw = stats.prob_draw;
@@ -125,7 +120,7 @@ function afficherResultats() {
     const countWinB = Math.round((probWinB / 100) * totalMatchs);
     const countDraw = Math.max(0, totalMatchs - countWinA - countWinB);
 
-    // Attribution sécurisée des largeurs de barres
+    // Injection des valeurs dans la barre horizontale
     document.getElementById('barWinA').style.width = `${probWinA}%`;
     document.getElementById('barWinA').textContent = probWinA > 0 ? `${probWinA}%` : '';
     
@@ -138,11 +133,11 @@ function afficherResultats() {
     document.getElementById('lblWinA').textContent = `Victoire ${tA}`;
     document.getElementById('lblWinB').textContent = `Victoire ${tB}`;
 
-    // Lancer Chart.js
+    // Rendu graphique
     genererDonutChart(tA, tB, countWinA, countDraw, countWinB);
 }
 
-// 4. Dessiner le Donut Chart
+// 4. Chart.js initialisation
 function genererDonutChart(teamA, teamB, winA, draw, winB) {
     const canvas = document.getElementById('donutChart');
     if (!canvas) return;
@@ -177,5 +172,4 @@ function genererDonutChart(teamA, teamB, winA, draw, winB) {
     });
 }
 
-// Déclenchement propre au chargement complet
 window.onload = loadData;
