@@ -29,6 +29,10 @@ async function loadData() {
             const wcText = await wcResponse.text();
             traiterEtAfficherDonneesWC(wcText);
         }
+
+        // AJOUT : On force le chargement des buteurs/classements API en direct dès le premier affichage
+        loadLiveRankingAndScorers();
+
     } catch (error) {
         console.error("Erreur critique lors de l'initialisation :", error);
     }
@@ -231,16 +235,11 @@ function traiterEtAfficherDonneesWC(csvText) {
     creerBarChart('chartDiff', 'Diff.', [...listeEquipesCompletes].sort((a,b) => b.db - a.db).slice(0, 10), 'db', '#e67e22');
 }
 
-// ==========================================
-// INTEGRATION DU LIVE CLASSEMENT & BUTEURS VIA API
-// ==========================================
 async function loadLiveRankingAndScorers() {
     const scorersBody = document.getElementById('scorersTableBody');
-    
-    // Appel pour les meilleurs buteurs (Scorers)
     try {
         const response = await fetch(API_SCORERS_URL, { headers: { 'X-Auth-Token': API_TOKEN } });
-        if (!response.ok) throw new Error("Plan gratuit restreint ou pas de données buteurs");
+        if (!response.ok) throw new Error("Plan gratuit restreint");
         const data = await response.json();
         
         if (data.scorers && data.scorers.length > 0) {
@@ -259,11 +258,8 @@ async function loadLiveRankingAndScorers() {
             scorersBody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); padding: 20px;">Aucun buteur inscrit pour le moment.</td></tr>`;
         }
     } catch (err) {
-        console.warn(err);
         scorersBody.innerHTML = `<tr><td colspan="4" style="color: var(--color-loss); padding: 15px; font-size: 12px;">⚠️ Indisponible sur le Free Tier API (Coupe du Monde).</td></tr>`;
     }
-
-    // NOTE: L'appel /standings de football-data peut être greffé ici de la même façon pour écraser le tableau de gauche si la compétition a commencé !
 }
 
 function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
@@ -307,22 +303,19 @@ function genererDonutChart(teamA, teamB, winA, draw, winB) {
     });
 }
 
-// ==========================================
-// MOTEUR DE COMPARAISON : MODELE VS REALITE (API LIVE)
-// ==========================================
 async function loadApiBacktestData() {
     const container = document.getElementById('backtestMatchesContainer');
     if (!container) return;
 
     try {
         const response = await fetch(API_URL, { headers: { 'X-Auth-Token': API_TOKEN } });
-        if (!response.ok) throw new Error("Erreur de communication API");
+        if (!response.ok) throw new Error("Erreur API");
         const data = await response.json();
         
         const finishedMatches = data.matches ? data.matches.filter(m => m.status === 'FINISHED') : [];
 
         if (finishedMatches.length === 0) {
-            container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Aucun match terminé retourné par l'API pour l'instant.</div>`;
+            container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Aucun match terminé retourné par l'API.</div>`;
             return;
         }
 
@@ -364,17 +357,11 @@ async function loadApiBacktestData() {
                 predTxt = `Attendu : ${modelFavorite === 'HOME_WIN' ? homeTeam : (modelFavorite === 'AWAY_WIN' ? awayTeam : 'Match Nul')} (${Math.max(probT1, probT2, probD)}%)`;
 
                 if (modelFavorite === realOutcome) {
-                    badgeClass = 'status-success';
-                    badgeTxt = 'Succès';
-                    success++;
+                    badgeClass = 'status-success'; badgeTxt = 'Succès'; success++;
                 } else if (Math.abs(probT1 - probT2) < 15 && realOutcome !== 'DRAW') {
-                    badgeClass = 'status-warning';
-                    badgeTxt = 'Nuancé';
-                    warning++;
+                    badgeClass = 'status-warning'; badgeTxt = 'Nuancé'; warning++;
                 } else {
-                    badgeClass = 'status-error';
-                    badgeTxt = 'Surprise';
-                    error++;
+                    badgeClass = 'status-error'; badgeTxt = 'Surprise'; error++;
                 }
             } else {
                 warning++;
@@ -384,11 +371,11 @@ async function loadApiBacktestData() {
             card.className = 'backtest-match-card';
             card.innerHTML = `
                 <div style="flex: 1;">
-                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Match Réel (API-Data)</span>
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Match Réel (API)</span>
                     <div style="font-size: 17px; font-weight: bold; margin-top: 4px;">${homeTeam} <span style="color: var(--accent-yellow);">${homeScore} - ${awayScore}</span> ${awayTeam}</div>
                 </div>
                 <div style="flex: 1; text-align: center; border-left: 1px solid #2c3e50; border-right: 1px solid #2c3e50; padding: 0 15px;">
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Analyse Prédictive</div>
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Prédiction</div>
                     <div style="font-weight: 500; margin-top: 4px; font-size: 13px;">${predTxt}</div>
                 </div>
                 <div style="flex: 0; padding-left: 20px; text-align: right;">
@@ -402,14 +389,13 @@ async function loadApiBacktestData() {
         const accuracyPct = totalCalculated > 0 ? ((success / totalCalculated) * 100).toFixed(1) : 0;
 
         document.getElementById('globalAccuracy').textContent = `${accuracyPct}%`;
-        document.getElementById('accuracySub').textContent = `Sur ${totalCalculated} matchs analysés en temps réel`;
+        document.getElementById('accuracySub').textContent = `Sur ${totalCalculated} matchs analysés`;
         document.getElementById('countSuccess').textContent = success;
         document.getElementById('countWarning').textContent = warning;
         document.getElementById('countError').textContent = error;
 
     } catch (err) {
-        console.error(err);
-        container.innerHTML = `<div style="color: var(--color-loss); text-align: center; padding: 40px;">⚠️ Échec d'autorisation ou restriction CORS détectée. Assurez-vous d'avoir cliqué sur le lien d'accès temporaire du proxy ou vérifié l'état des jetons.</div>`;
+        container.innerHTML = `<div style="color: var(--color-loss); text-align: center; padding: 40px;">⚠️ Erreur de proxy ou de jeton API détectée.</div>`;
     }
 }
 
