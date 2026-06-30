@@ -27,10 +27,11 @@
         }
 
         .dashboard {
-            max-width: 1400px; /* Élargi pour accueillir les graphiques */
+            max-width: 1400px;
             margin: 0 auto;
         }
 
+        /* Titre Doré Brillant */
         .gold-title {
             font-size: 42px;
             font-weight: 900;
@@ -51,6 +52,7 @@
             text-align: center;
         }
 
+        /* Onglets */
         .tabs-container {
             display: flex;
             justify-content: center;
@@ -84,7 +86,7 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* Styles H2H */
+        /* Zone Sélecteurs Face à Face */
         .selector-zone {
             background-color: var(--card-bg);
             padding: 20px;
@@ -162,7 +164,7 @@
         .match-teams { font-weight: 500; }
         .match-score { font-weight: bold; background-color: #152238; padding: 4px 10px; border-radius: 4px; color: var(--accent-yellow); letter-spacing: 2px; font-family: monospace; font-size: 15px; }
 
-        /* Grille pour les 4 Graphiques Top 10 */
+        /* Grille des Graphiques Top 10 */
         .ranking-charts-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -201,7 +203,7 @@
             width: 100%;
         }
 
-        /* Tableau Classement */
+        /* Tableau Classement Coupe du Monde */
         .ranking-card {
             background-color: var(--card-bg);
             border-radius: 8px;
@@ -278,10 +280,24 @@
 
         <div class="main-grid" id="resultGrid">
             <div class="card">
-                <div class="card-title">Total des matchs joués</div>
+                <div class="card-title">Données historiques de confrontation</div>
                 <div class="total-box">
+                    <span style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Matchs enregistrés</span>
                     <div class="total-number" id="totalMatches">0</div>
-                    <div style="color: var(--text-muted); margin-top: 15px;">Matchs enregistrés</div>
+                    
+                    <div class="goals-averages-container" id="goalsContainer" style="display: none; margin-top: 25px; width: 100%;">
+                        <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; text-align: center; margin-bottom: 12px; letter-spacing: 0.5px;">Moyenne de buts par match</div>
+                        <div style="display: flex; justify-content: space-around; gap: 10px;">
+                            <div style="background-color: rgba(46, 204, 113, 0.15); border: 1px solid var(--color-win); padding: 10px 15px; border-radius: 6px; text-align: center; flex: 1; min-width: 0;">
+                                <div id="lblGoalTeamA" style="font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Équipe A</div>
+                                <div id="avgGoalsA" style="font-size: 22px; font-weight: bold; color: var(--color-win);">0.0</div>
+                            </div>
+                            <div style="background-color: rgba(231, 76, 60, 0.15); border: 1px solid var(--color-loss); padding: 10px 15px; border-radius: 6px; text-align: center; flex: 1; min-width: 0;">
+                                <div id="lblGoalTeamB" style="font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Équipe B</div>
+                                <div id="avgGoalsB" style="font-size: 22px; font-weight: bold; color: var(--color-loss);">0.0</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -312,7 +328,6 @@
     </div>
 
     <div id="ranking-view" class="view-section">
-        
         <div class="ranking-charts-grid">
             <div class="chart-box">
                 <div class="chart-box-title">🏆 Top 10 — Titres Mondiaux</div>
