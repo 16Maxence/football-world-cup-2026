@@ -303,72 +303,12 @@
     <div class="subtitle">Tableau de bord d'analyses prédictives et d'historiques de la Coupe du Monde</div>
 
     <div class="tabs-container">
-        <button class="tab-btn active" onclick="switchTab('h2h-view', this)">⚔️ Face à Face</button>
-        <button class="tab-btn" onclick="switchTab('ranking-view', this); loadLiveRankingAndScorers();">📊 Classement & Buteurs</button>
+        <button class="tab-btn active" onclick="switchTab('ranking-view', this); loadLiveRankingAndScorers();">📊 Classement & Buteurs</button>
         <button class="tab-btn" onclick="switchTab('backtest-view', this); loadApiBacktestData();">📈 Modèle vs Réalité (API)</button>
+        <button class="tab-btn" onclick="switchTab('h2h-view', this)">⚔️ Face à Face</button>
     </div>
 
-    <div id="h2h-view" class="view-section active">
-        <div class="selector-zone">
-            <select id="teamA" onchange="chargerAdversaires()">
-                <option value="">Sélectionner Équipe</option>
-            </select>
-            <div class="vs-label">VS</div>
-            <select id="teamB" onchange="afficherResultats()">
-                <option value="">Sélectionner Équipe</option>
-            </select>
-        </div>
-
-        <div class="main-grid" id="resultGrid">
-            <div class="card">
-                <div class="card-title">Données historiques de confrontation</div>
-                <div class="total-box">
-                    <span style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Matchs enregistrés</span>
-                    <div class="total-number" id="totalMatches">0</div>
-                    
-                    <div class="goals-averages-container" id="goalsContainer" style="display: none; margin-top: 25px; width: 100%;">
-                        <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; text-align: center; margin-bottom: 12px; letter-spacing: 0.5px;">Moyenne de buts par match</div>
-                        <div style="display: flex; justify-content: space-around; gap: 10px;">
-                            <div style="background-color: rgba(46, 204, 113, 0.15); border: 1px solid var(--color-win); padding: 10px 15px; border-radius: 6px; text-align: center; flex: 1; min-width: 0;">
-                                <div id="lblGoalTeamA" style="font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Équipe A</div>
-                                <div id="avgGoalsA" style="font-size: 22px; font-weight: bold; color: var(--color-win);">0.0</div>
-                            </div>
-                            <div style="background-color: rgba(231, 76, 60, 0.15); border: 1px solid var(--color-loss); padding: 10px 15px; border-radius: 6px; text-align: center; flex: 1; min-width: 0;">
-                                <div id="lblGoalTeamB" style="font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Équipe B</div>
-                                <div id="avgGoalsB" style="font-size: 22px; font-weight: bold; color: var(--color-loss);">0.0</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Résultats (Donut)</div>
-                <div class="donut-container">
-                    <canvas id="donutChart"></canvas>
-                </div>
-                <div class="elo-section">
-                    <div class="elo-header">🎯 Analyse des probabilités théoriques du modèle</div>
-                    <div class="prob-bar">
-                        <div id="barWinA" class="prob-segment prob-win-a"></div>
-                        <div id="barDraw" class="prob-segment prob-draw"></div>
-                        <div id="barWinB" class="prob-segment prob-win-b"></div>
-                    </div>
-                    <div class="prob-labels">
-                        <span id="lblWinA">Victoire Équipe A</span>
-                        <span>Match nul</span>
-                        <span id="lblWinB">Victoire Équipe B</span>
-                    </div>
-                </div>
-                <div class="elo-section" style="border-top: 1px solid #2c3e50; margin-top: 25px; padding-top: 15px;">
-                    <div class="elo-header">📜 Vrais scores des dernières confrontations (CSV)</div>
-                    <div id="matchHistoryList" class="history-list"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="ranking-view" class="view-section">
+    <div id="ranking-view" class="view-section active">
         <div class="ranking-charts-grid">
             <div class="chart-box">
                 <div class="chart-box-title">🏆 Top 10 — Titres Mondiaux</div>
@@ -458,6 +398,66 @@
 
         <div id="backtestMatchesContainer">
             <div style="color: var(--text-muted); text-align: center; padding: 40px;">Chargement et connexion aux flux de données en cours...</div>
+        </div>
+    </div>
+
+    <div id="h2h-view" class="view-section">
+        <div class="selector-zone">
+            <select id="teamA" onchange="chargerAdversaires()">
+                <option value="">Sélectionner Équipe</option>
+            </select>
+            <div class="vs-label">VS</div>
+            <select id="teamB" onchange="afficherResultats()">
+                <option value="">Sélectionner Équipe</option>
+            </select>
+        </div>
+
+        <div class="main-grid" id="resultGrid">
+            <div class="card">
+                <div class="card-title">Données historiques de confrontation</div>
+                <div class="total-box">
+                    <span style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Matchs enregistrés</span>
+                    <div class="total-number" id="totalMatches">0</div>
+                    
+                    <div class="goals-averages-container" id="goalsContainer" style="display: none; margin-top: 25px; width: 100%;">
+                        <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; text-align: center; margin-bottom: 12px; letter-spacing: 0.5px;">Moyenne de buts par match</div>
+                        <div style="display: flex; justify-content: space-around; gap: 10px;">
+                            <div style="background-color: rgba(46, 204, 113, 0.15); border: 1px solid var(--color-win); padding: 10px 15px; border-radius: 6px; text-align: center; flex: 1; min-width: 0;">
+                                <div id="lblGoalTeamA" style="font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Équipe A</div>
+                                <div id="avgGoalsA" style="font-size: 22px; font-weight: bold; color: var(--color-win);">0.0</div>
+                            </div>
+                            <div style="background-color: rgba(231, 76, 60, 0.15); border: 1px solid var(--color-loss); padding: 10px 15px; border-radius: 6px; text-align: center; flex: 1; min-width: 0;">
+                                <div id="lblGoalTeamB" style="font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">Équipe B</div>
+                                <div id="avgGoalsB" style="font-size: 22px; font-weight: bold; color: var(--color-loss);">0.0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Résultats (Donut)</div>
+                <div class="donut-container">
+                    <canvas id="donutChart"></canvas>
+                </div>
+                <div class="elo-section">
+                    <div class="elo-header">🎯 Analyse des probabilités théoriques du modèle</div>
+                    <div class="prob-bar">
+                        <div id="barWinA" class="prob-segment prob-win-a"></div>
+                        <div id="barDraw" class="prob-segment prob-draw"></div>
+                        <div id="barWinB" class="prob-segment prob-win-b"></div>
+                    </div>
+                    <div class="prob-labels">
+                        <span id="lblWinA">Victoire Équipe A</span>
+                        <span>Match nul</span>
+                        <span id="lblWinB">Victoire Équipe B</span>
+                    </div>
+                </div>
+                <div class="elo-section" style="border-top: 1px solid #2c3e50; margin-top: 25px; padding-top: 15px;">
+                    <div class="elo-header">📜 Vrais scores des dernières confrontations (CSV)</div>
+                    <div id="matchHistoryList" class="history-list"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
