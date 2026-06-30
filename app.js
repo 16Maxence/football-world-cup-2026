@@ -3,7 +3,12 @@ let rawCsvMatches = [];
 let donutChartInstance = null;
 let rankingCharts = {};
 
-// Chargement initial des ressources
+// CONFIGURATION SECURISEE POUR FOOTBALL-DATA.ORG VIA PROXY CORS-ANYWHERE
+const API_TOKEN = '310eb3d9be9e445996853b810f0dfdf6'; 
+const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+const API_URL = PROXY_URL + 'https://api.football-data.org/v4/competitions/WC/matches';
+
+// Chargement initial des ressources locales
 async function loadData() {
     try {
         const jsonResponse = await fetch('./predictions_modele.json');
@@ -17,7 +22,6 @@ async function loadData() {
         
         populateTeamA();
 
-        // Chargement du classement historique de la Coupe du Monde
         const wcResponse = await fetch('./classement_historique_wc.csv');
         if (wcResponse.ok) {
             const wcText = await wcResponse.text();
@@ -28,7 +32,6 @@ async function loadData() {
     }
 }
 
-// Parseur pour results.csv
 function parseCsvData(text) {
     const lines = text.split('\n');
     for (let i = 1; i < lines.length; i++) {
@@ -48,7 +51,6 @@ function parseCsvData(text) {
     }
 }
 
-// Injection des sélections uniques dans le premier menu déroulant
 function populateTeamA() {
     const teams = new Set();
     Object.values(matchPredictData).forEach(match => {
@@ -67,7 +69,6 @@ function populateTeamA() {
     }
 }
 
-// Gestion des onglets
 function switchTab(viewId, btnElement) {
     document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -75,7 +76,6 @@ function switchTab(viewId, btnElement) {
     btnElement.classList.add('active');
 }
 
-// Filtrage dynamique du second sélecteur (Adversaires disponibles)
 function chargerAdversaires() {
     const tA = document.getElementById('teamA').value;
     const selectB = document.getElementById('teamB');
@@ -101,7 +101,6 @@ function chargerAdversaires() {
     }
 }
 
-// Rendu des calculs, de la barre linéaire et des moyennes de buts
 function afficherResultats() {
     const tA = document.getElementById('teamA').value;
     const tB = document.getElementById('teamB').value;
@@ -136,7 +135,6 @@ function afficherResultats() {
     document.getElementById('lblWinA').textContent = `Victoire ${tA}`;
     document.getElementById('lblWinB').textContent = `Victoire ${tB}`;
 
-    // Traitement dynamique des moyennes de buts (conserve la couleur liée)
     const goalsContainer = document.getElementById('goalsContainer');
     if (goalsContainer) {
         goalsContainer.style.display = 'block';
@@ -152,7 +150,6 @@ function afficherResultats() {
     chargerVraisScoresCsv(tA, tB);
 }
 
-// Extraction de l'historique complet des vrais scores
 function chargerVraisScoresCsv(tA, tB) {
     const listContainer = document.getElementById('matchHistoryList');
     listContainer.innerHTML = '';
@@ -175,7 +172,6 @@ function chargerVraisScoresCsv(tA, tB) {
     });
 }
 
-// Construction de l'onglet classement et tri des 4 Top 10
 function traiterEtAfficherDonneesWC(csvText) {
     const tbody = document.getElementById('rankingTableBody');
     if (!tbody) return;
@@ -227,14 +223,12 @@ function traiterEtAfficherDonneesWC(csvText) {
         }
     }
 
-    // Instanciation unifiée des graphiques Top 10
     creerBarChart('chartTitres', 'Titres', [...listeEquipesCompletes].sort((a,b) => b.titres - a.titres).slice(0, 10), 'titres', '#f1c40f');
     creerBarChart('chartPoints', 'Points', [...listeEquipesCompletes].sort((a,b) => b.pts - a.pts).slice(0, 10), 'pts', '#3498db');
     creerBarChart('chartVictoires', 'Victoires', [...listeEquipesCompletes].sort((a,b) => b.v - a.v).slice(0, 10), 'v', '#2ecc71');
     creerBarChart('chartDiff', 'Diff.', [...listeEquipesCompletes].sort((a,b) => b.db - a.db).slice(0, 10), 'db', '#e67e22');
 }
 
-// Fonction utilitaire de rendu des graphiques barres horizontaux
 function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
     const ctx = document.getElementById(canvasId).getContext('2d');
     if (rankingCharts[canvasId]) rankingCharts[canvasId].destroy();
@@ -258,7 +252,6 @@ function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
     });
 }
 
-// Graphique circulaire (Donut)
 function genererDonutChart(teamA, teamB, winA, draw, winB) {
     const ctx = document.getElementById('donutChart').getContext('2d');
     if (donutChartInstance) donutChartInstance.destroy();
@@ -275,6 +268,116 @@ function genererDonutChart(teamA, teamB, winA, draw, winB) {
             cutout: '70%'
         }
     });
+}
+
+// ==========================================
+// MOTEUR DE COMPARISON : MODELE VS REAlITE (API LIVE)
+// ==========================================
+async function loadApiBacktestData() {
+    const container = document.getElementById('backtestMatchesContainer');
+    if (!container) return;
+
+    try {
+        const response = await fetch(API_URL, {
+            headers: { 'X-Auth-Token': API_TOKEN }
+        });
+        
+        if (!response.ok) throw new Error("Erreur de communication API");
+        const data = await response.json();
+        
+        // On isole les matchs de Coupe du Monde terminés (FINISHED)
+        const finishedMatches = data.matches ? data.matches.filter(m => m.status === 'FINISHED') : [];
+
+        if (finishedMatches.length === 0) {
+            container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Aucun match terminé retourné par l'API pour l'instant.</div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        let success = 0, warning = 0, error = 0;
+
+        finishedMatches.forEach(match => {
+            const homeTeam = match.homeTeam.name;
+            const awayTeam = match.awayTeam.name;
+            const homeScore = match.score.fullTime.home;
+            const awayScore = match.score.fullTime.away;
+
+            let realOutcome = 'DRAW';
+            if (homeScore > awayScore) realOutcome = 'HOME_WIN';
+            if (homeScore < awayScore) realOutcome = 'AWAY_WIN';
+
+            let key = `${homeTeam}-${awayTeam}`;
+            let isInverted = false;
+            
+            if (!matchPredictData[key]) {
+                key = `${awayTeam}-${homeTeam}`;
+                isInverted = true;
+            }
+
+            const pred = matchPredictData[key];
+            let badgeClass = 'status-warning';
+            let badgeTxt = 'Nuancé';
+            let predTxt = 'Modèle non calculé';
+
+            if (pred) {
+                const probT1 = isInverted ? pred.stats.prob_team2 : pred.stats.prob_team1;
+                const probT2 = isInverted ? pred.stats.prob_team1 : pred.stats.prob_team2;
+                const probD  = pred.stats.prob_draw;
+
+                let modelFavorite = 'DRAW';
+                if (probT1 > probT2 && probT1 > probD) modelFavorite = 'HOME_WIN';
+                if (probT2 > probT1 && probT2 > probD) modelFavorite = 'AWAY_WIN';
+
+                predTxt = `Attendu : ${modelFavorite === 'HOME_WIN' ? homeTeam : (modelFavorite === 'AWAY_WIN' ? awayTeam : 'Match Nul')} (${Math.max(probT1, probT2, probD)}%)`;
+
+                if (modelFavorite === realOutcome) {
+                    badgeClass = 'status-success';
+                    badgeTxt = 'Succès';
+                    success++;
+                } else if (Math.abs(probT1 - probT2) < 15 && realOutcome !== 'DRAW') {
+                    badgeClass = 'status-warning';
+                    badgeTxt = 'Nuancé';
+                    warning++;
+                } else {
+                    badgeClass = 'status-error';
+                    badgeTxt = 'Surprise';
+                    error++;
+                }
+            } else {
+                warning++;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'backtest-match-card';
+            card.innerHTML = `
+                <div style="flex: 1;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Match Réel (API-Data)</span>
+                    <div style="font-size: 17px; font-weight: bold; margin-top: 4px;">${homeTeam} <span style="color: var(--accent-yellow);">${homeScore} - ${awayScore}</span> ${awayTeam}</div>
+                </div>
+                <div style="flex: 1; text-align: center; border-left: 1px solid #2c3e50; border-right: 1px solid #2c3e50; padding: 0 15px;">
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Analyse Prédictive</div>
+                    <div style="font-weight: 500; margin-top: 4px; font-size: 13px;">${predTxt}</div>
+                </div>
+                <div style="flex: 0; padding-left: 20px; text-align: right;">
+                    <span class="status-badge ${badgeClass}">${badgeTxt}</span>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        const totalCalculated = success + warning + error;
+        const accuracyPct = totalCalculated > 0 ? ((success / totalCalculated) * 100).toFixed(1) : 0;
+
+        document.getElementById('globalAccuracy').textContent = `${accuracyPct}%`;
+        document.getElementById('accuracySub').textContent = `Sur ${totalCalculated} matchs analysés en temps réel`;
+        document.getElementById('countSuccess').textContent = success;
+        document.getElementById('countWarning').textContent = warning;
+        document.getElementById('countError').textContent = error;
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div style="color: var(--color-loss); text-align: center; padding: 40px;">⚠️ Échec d'autorisation ou restriction CORS détectée. Assurez-vous d'avoir cliqué sur le lien d'accès temporaire du proxy ou vérifié l'état des jetons.</div>`;
+    }
 }
 
 window.onload = loadData;
