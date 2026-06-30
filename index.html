@@ -27,7 +27,7 @@
         }
 
         .dashboard {
-            max-width: 1200px;
+            max-width: 1400px; /* Élargi pour accueillir les graphiques */
             margin: 0 auto;
         }
 
@@ -162,7 +162,46 @@
         .match-teams { font-weight: 500; }
         .match-score { font-weight: bold; background-color: #152238; padding: 4px 10px; border-radius: 4px; color: var(--accent-yellow); letter-spacing: 2px; font-family: monospace; font-size: 15px; }
 
-        /* NOUVEAU DESIGN : Tableau type Image 80e65e */
+        /* Grille pour les 4 Graphiques Top 10 */
+        .ranking-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 1200px) {
+            .ranking-charts-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 650px) {
+            .ranking-charts-grid { grid-template-columns: 1fr; }
+        }
+
+        .chart-box {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 15px;
+            height: 260px;
+            box-sizing: border-box;
+        }
+
+        .chart-box-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .chart-container-wrapper {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+
+        /* Tableau Classement */
         .ranking-card {
             background-color: var(--card-bg);
             border-radius: 8px;
@@ -193,15 +232,11 @@
         }
 
         .ranking-table tr:hover { background-color: rgba(255, 255, 255, 0.02); }
-
-        /* Alignements spéciaux */
         .align-left { text-align: left !important; }
-        
         .rank-col { font-weight: bold; color: var(--text-muted); width: 50px; }
         .team-name-container { display: flex; align-items: center; gap: 8px; font-weight: bold; }
         .pts-col { font-weight: bold; color: var(--accent-yellow); font-size: 15px; }
 
-        /* Badges de groupe & trophées */
         .group-badge {
             background-color: #20334e;
             color: #94a3b8;
@@ -255,7 +290,6 @@
                 <div class="donut-container">
                     <canvas id="donutChart"></canvas>
                 </div>
-
                 <div class="elo-section">
                     <div class="elo-header">🎯 Analyse des probabilités théoriques du modèle</div>
                     <div class="prob-bar">
@@ -269,7 +303,6 @@
                         <span id="lblWinB">Victoire Équipe B</span>
                     </div>
                 </div>
-
                 <div class="elo-section" style="border-top: 1px solid #2c3e50; margin-top: 25px; padding-top: 15px;">
                     <div class="elo-header">📜 Vrais scores des dernières confrontations (CSV)</div>
                     <div id="matchHistoryList" class="history-list"></div>
@@ -279,6 +312,26 @@
     </div>
 
     <div id="ranking-view" class="view-section">
+        
+        <div class="ranking-charts-grid">
+            <div class="chart-box">
+                <div class="chart-box-title">🏆 Top 10 — Titres Mondiaux</div>
+                <div class="chart-container-wrapper"><canvas id="chartTitres"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-box-title">🔥 Top 10 — Total Points</div>
+                <div class="chart-container-wrapper"><canvas id="chartPoints"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-box-title">🟢 Top 10 — Victoires</div>
+                <div class="chart-container-wrapper"><canvas id="chartVictoires"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-box-title">⚡ Top 10 — Différence de Buts</div>
+                <div class="chart-container-wrapper"><canvas id="chartDiff"></canvas></div>
+            </div>
+        </div>
+
         <div class="ranking-card">
             <table class="ranking-table">
                 <thead>
@@ -295,8 +348,7 @@
                         <th>Diff.</th>
                     </tr>
                 </thead>
-                <tbody id="rankingTableBody">
-                    </tbody>
+                <tbody id="rankingTableBody"></tbody>
             </table>
         </div>
     </div>
