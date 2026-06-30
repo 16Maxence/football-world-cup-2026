@@ -51,41 +51,24 @@
             text-align: center;
         }
 
-        /* BANDEAU PRÉDICTION VAINQUEUR */
+        /* BANDEAU TOP 5 PRÉDICTION VAINQUEUR 2026 */
         .prediction-banner {
             background: linear-gradient(rgba(21, 34, 56, 0.9), rgba(21, 34, 56, 0.9)), url('https://www.transparenttextures.com/patterns/dark-matter.png');
             border: 1px solid #bf953f;
             border-radius: 8px;
             padding: 15px 25px;
-            text-align: center;
             margin-bottom: 25px;
             box-shadow: 0 4px 20px rgba(191, 149, 63, 0.15);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .prediction-text {
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .prediction-text strong {
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 22px;
-            font-weight: 900;
-            margin-left: 5px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
         }
 
         .sync-badge {
             background-color: #1a2f4c;
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 11px;
             padding: 6px 14px;
             border-radius: 20px;
             border: 1px solid #2c3e50;
@@ -220,7 +203,7 @@
         .match-teams { font-weight: 500; }
         .match-score { font-weight: bold; background-color: #152238; padding: 4px 10px; border-radius: 4px; color: var(--accent-yellow); letter-spacing: 2px; font-family: monospace; font-size: 15px; }
 
-        /* Grille des Graphiques Correctement Alignée */
+        /* Grille des Graphiques Alignée */
         .ranking-charts-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -239,7 +222,7 @@
             background-color: var(--card-bg);
             border-radius: 8px;
             padding: 20px;
-            height: 280px; /* Hauteur stable pour éviter le bug de hauteur */
+            height: 280px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -355,17 +338,22 @@
     <div class="subtitle">Tableau de bord d'analyses prédictives et d'historiques de la Coupe du Monde</div>
 
     <div class="prediction-banner">
-        <div class="prediction-text">
-            🔮 Prédiction du Vainqueur Final 2026 : <strong id="predictedWinner">ARGENTINE (18.4%)</strong>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-yellow); text-transform: uppercase; letter-spacing: 1px;">
+                🔮 Top 5 Modèle Prédictif — Vainqueur Final Coupe du Monde 2026
+            </div>
+            <div class="sync-badge">
+                <div class="sync-dot"></div>
+                <span id="syncTimeStatus">Actualisation toutes les 6 heures</span>
+            </div>
         </div>
-        <div class="sync-badge">
-            <div class="sync-dot"></div>
-            <span id="syncTimeStatus">Actualisation toutes les 6 heures</span>
-        </div>
+        
+        <div id="top5Container" style="display: flex; gap: 12px; justify-content: space-between; flex-wrap: wrap; margin-top: 5px;">
+            </div>
     </div>
 
     <div class="tabs-container">
-        <button class="tab-btn active" onclick="switchTab('ranking-view', this); loadLiveRankingAndScorers();">📊 Classement & Buteurs</button>
+        <button class="tab-btn active" onclick="switchTab('ranking-view', this); loadLiveRankingAndScorers();">📊 Classement</button>
         <button class="tab-btn" onclick="switchTab('backtest-view', this); loadApiBacktestData();">📈 Modèle vs Réalité (API)</button>
         <button class="tab-btn" onclick="switchTab('h2h-view', this)">⚔️ Face à Face</button>
     </div>
