@@ -6,7 +6,6 @@ let rankingCharts = {};
 const API_TOKEN = '310eb3d9be9e445996853b810f0dfdf6'; 
 const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
 const API_URL = PROXY_URL + 'https://api.football-data.org/v4/competitions/WC/matches';
-const API_STANDINGS_URL = PROXY_URL + 'https://api.football-data.org/v4/competitions/WC/standings';
 
 // Chargement initial des ressources locales
 async function loadData() {
@@ -28,25 +27,56 @@ async function loadData() {
             traiterEtAfficherDonneesWC(wcText);
         }
 
-        // Calcul dynamique et affichage du vainqueur sous le titre
-        determinerVainqueurFavori();
-
-        // Lancement immédiat de la récupération API
-        loadLiveRankingAndScorers();
+        // Affiche le Top 5 horizontal sous le titre
+        genererTop5Vainqueurs();
+        MettreAJourBadgeStatut("Sécurisé (CSV local)");
 
     } catch (error) {
         console.error("Erreur critique lors de l'initialisation :", error);
     }
 }
 
-// Calcule dynamiquement le favori ayant la plus haute probabilité de victoire générale
-function determinerVainqueurFavori() {
-    let topTeam = "BRÉSIL";
-    let maxProb = 16.8;
+// Génère et insère dynamiquement les badges du Top 5
+function genererTop5Vainqueurs() {
+    const top5Data = [
+        { rang: 1, equipe: "ARGENTINE", prob: "18.4%", logo: "🇦🇷" },
+        { rang: 2, equipe: "BRÉSIL", prob: "16.8%", logo: "🇧🇷" },
+        { rang: 3, equipe: "FRANCE", prob: "14.2%", logo: "🇫🇷" },
+        { rang: 4, equipe: "ESPAGNE", prob: "11.5%", logo: "🇪🇸" },
+        { rang: 5, equipe: "ALLEMAGNE", prob: "9.7%", logo: "🇩🇪" }
+    ];
 
-    // Optionnel : si ton JSON contient une clé globale vainqueur, tu peux la lier ici.
-    // Sinon, cette valeur par défaut restera propre et dorée sous le titre.
-    document.getElementById('predictedWinner').textContent = `${topTeam} (${maxProb}%)`;
+    const container = document.getElementById('top5Container');
+    if (!container) return;
+    
+    container.innerHTML = ''; // Nettoyage
+
+    top5Data.forEach(item => {
+        const borderGold = item.rang === 1 ? 'border: 1px solid #bf953f; background: rgba(191, 149, 63, 0.08);' : 'border: 1px solid #2c3e50;';
+        const badge = document.createElement('div');
+        badge.style.cssText = `
+            flex: 1;
+            min-width: 165px;
+            background-color: #1a2f4c;
+            padding: 10px 14px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            ${borderGold}
+        `;
+        
+        badge.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 900; color: ${item.rang === 1 ? '#f1c40f' : 'var(--text-muted)'}; font-size: 13px;">#${item.rang}</span>
+                <span style="font-size: 16px;">${item.logo}</span>
+                <span style="font-weight: bold; font-size: 13px; color: #ffffff; letter-spacing: 0.5px;">${item.equipe}</span>
+            </div>
+            <span style="font-weight: 800; color: var(--accent-yellow); font-size: 13px;">${item.prob}</span>
+        `;
+        container.appendChild(badge);
+    });
 }
 
 function parseCsvData(text) {
@@ -247,28 +277,9 @@ function traiterEtAfficherDonneesWC(csvText) {
     creerBarChart('chartDiff', 'Diff.', [...listeEquipesCompletes].sort((a,b) => b.db - a.db).slice(0, 10), 'db', '#e67e22');
 }
 
-// RÉCUPÉRATION DU CLASSEMENT EN DIRECT (FOOTBALL-DATA)
-async function loadLiveRankingAndScorers() {
-    try {
-        const response = await fetch(API_STANDINGS_URL, { headers: { 'X-Auth-Token': API_TOKEN } });
-        if (!response.ok) throw new Error("Plan restreint");
-        const data = await response.json();
-        
-        // Si la Coupe du Monde a commencé, on injecte les poules réelles à la place de l'historique
-        if (data.standings && data.standings.length > 0) {
-            console.log("Données de classement en direct injectées avec succès.");
-        }
-        
-        MettreAJourBadgeStatut("Synchronisé");
-    } catch (err) {
-        console.warn("API Hors-Ligne ou quota atteint. Utilisation des tables locales de sécurité.");
-        MettreAJourBadgeStatut("Locale (Sécurisée)");
-    }
-}
-
 function MettreAJourBadgeStatut(statut) {
     const maintenant = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('syncTimeStatus').textContent = `Statut : ${statut} à ${maintenant} (Prochain check dans 6h)`;
+    document.getElementById('syncTimeStatus').textContent = `Mode : ${statut} à ${maintenant}`;
 }
 
 function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
@@ -408,24 +419,20 @@ async function loadApiBacktestData() {
     }
 }
 
-// AUTOMATISATION : VÉRIFICATION ET MISE À JOUR TOUTES LES 6 HEURES EN ARRIÈRE-PLAN
-// 6 heures = 6 * 60 * 60 * 1000 = 21600000 millisecondes
+// AUTOMATISATION : RAFFRAICHISSEMENT CSV UNIQUEMENT TOUTES LES 6 HEURES
 setInterval(async () => {
-    console.log("Lancement de la routine de mise à jour automatique (6h)...");
+    console.log("Mise à jour des données CSV locales...");
     try {
-        // Re-téléchargement discret du CSV local si modifié
         const csvResponse = await fetch('./results.csv?cachebust=' + Date.now());
         if (csvResponse.ok) {
             const csvText = await csvResponse.text();
             parseCsvData(csvText);
         }
-        // Rafraîchissement des appels API actifs
-        await loadLiveRankingAndScorers();
         if(document.getElementById('backtest-view').classList.contains('active')) {
             loadApiBacktestData();
         }
     } catch (e) {
-        console.error("Échec du rafraîchissement automatique :", e);
+        console.error("Erreur lors du rafraîchissement d'arrière-plan :", e);
     }
 }, 21600000);
 
