@@ -31,7 +31,6 @@
             margin: 0 auto;
         }
 
-        /* Titre Doré Brillant */
         .gold-title {
             font-size: 42px;
             font-weight: 900;
@@ -52,7 +51,6 @@
             text-align: center;
         }
 
-        /* Barre d'onglets style boutons */
         .tabs-container {
             display: flex;
             justify-content: center;
@@ -75,11 +73,7 @@
             text-transform: uppercase;
         }
 
-        .tab-btn:hover {
-            color: white;
-            background-color: #223754;
-        }
-
+        .tab-btn:hover { color: white; background-color: #223754; }
         .tab-btn.active {
             background: var(--gold-gradient);
             color: #0d1b2a;
@@ -87,15 +81,10 @@
             box-shadow: 0px 4px 12px rgba(187, 149, 63, 0.4);
         }
 
-        /* Gestion des vues */
-        .view-section {
-            display: none;
-        }
-        .view-section.active {
-            display: block;
-        }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
 
-        /* Styles Zone Sélecteurs (H2H) */
+        /* Styles H2H */
         .selector-zone {
             background-color: var(--card-bg);
             padding: 20px;
@@ -118,22 +107,12 @@
             width: 250px;
         }
 
-        .vs-label {
-            color: var(--accent-yellow);
-            font-weight: bold;
-            font-size: 20px;
-        }
+        .vs-label { color: var(--accent-yellow); font-weight: bold; font-size: 20px; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; display: none; }
 
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            display: none;
-        }
-
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
             .main-grid { grid-template-columns: 1fr; }
-            .ranking-table th:nth-child(4), .ranking-table td:nth-child(4) { display: none; }
+            .hide-mobile { display: none !important; }
         }
 
         .card {
@@ -162,144 +141,81 @@
             min-height: 250px;
         }
 
-        .total-number {
-            font-size: 72px;
-            font-weight: bold;
-            color: var(--accent-yellow);
-            line-height: 1;
-        }
-
-        .donut-container {
-            position: relative;
-            width: 100%;
-            height: 220px;
-            margin: 0 auto 30px auto;
-        }
-
-        .elo-section {
-            border-top: 1px solid #2c3e50;
-            margin-top: 20px;
-            padding-top: 20px;
-        }
-
-        .elo-header {
-            font-size: 11px;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 15px;
-        }
-
-        .prob-bar {
-            display: flex;
-            height: 24px;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 8px;
-            background-color: #1a2f4c;
-        }
-
-        .prob-segment {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: #000;
-            width: 0%;
-            transition: width 0.4s ease;
-        }
-
+        .total-number { font-size: 72px; font-weight: bold; color: var(--accent-yellow); line-height: 1; }
+        .donut-container { position: relative; width: 100%; height: 220px; margin: 0 auto 30px auto; }
+        .elo-section { border-top: 1px solid #2c3e50; margin-top: 20px; padding-top: 20px; }
+        .elo-header { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 15px; }
+        
+        .prob-bar { display: flex; height: 24px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; background-color: #1a2f4c; }
+        .prob-segment { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #000; width: 0%; transition: width 0.4s ease; }
         .prob-win-a { background-color: var(--color-win); }
         .prob-draw { background-color: var(--color-draw); }
         .prob-win-b { background-color: var(--color-loss); }
+        .prob-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
 
-        .prob-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .history-list {
-            margin-top: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
-        .history-item {
-            background-color: #0d1b2a;
-            padding: 12px 15px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            border-left: 4px solid transparent;
-        }
-
+        .history-list { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px; }
+        .history-item { background-color: #0d1b2a; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; border-left: 4px solid transparent; }
         .history-item.win { border-left-color: var(--color-win); }
         .history-item.draw { border-left-color: var(--color-draw); }
         .history-item.loss { border-left-color: var(--color-loss); }
-
         .match-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
         .match-teams { font-weight: 500; }
-        .match-score {
-            font-weight: bold;
-            background-color: #152238;
-            padding: 4px 10px;
-            border-radius: 4px;
-            color: var(--accent-yellow);
-            letter-spacing: 2px;
-            font-family: monospace;
-            font-size: 15px;
-        }
+        .match-score { font-weight: bold; background-color: #152238; padding: 4px 10px; border-radius: 4px; color: var(--accent-yellow); letter-spacing: 2px; font-family: monospace; font-size: 15px; }
 
-        /* Style spécifique pour le tableau Classement */
+        /* NOUVEAU DESIGN : Tableau type Image 80e65e */
         .ranking-card {
             background-color: var(--card-bg);
             border-radius: 8px;
-            padding: 25px;
+            padding: 20px;
+            overflow-x: auto;
         }
 
         .ranking-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            text-align: left;
+            text-align: center;
         }
 
         .ranking-table th {
             color: var(--text-muted);
             text-transform: uppercase;
             font-size: 12px;
-            letter-spacing: 1px;
-            padding: 12px 10px;
+            font-weight: 600;
+            padding: 15px 10px;
             border-bottom: 2px solid #2c3e50;
         }
 
         .ranking-table td {
-            padding: 14px 10px;
+            padding: 12px 10px;
             border-bottom: 1px solid #1e2d42;
-            font-size: 15px;
+            font-size: 14px;
+            color: #e2e8f0;
         }
 
-        .ranking-table tr:hover {
-            background-color: rgba(255, 255, 255, 0.02);
+        .ranking-table tr:hover { background-color: rgba(255, 255, 255, 0.02); }
+
+        /* Alignements spéciaux */
+        .align-left { text-align: left !important; }
+        
+        .rank-col { font-weight: bold; color: var(--text-muted); width: 50px; }
+        .team-name-container { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        .pts-col { font-weight: bold; color: var(--accent-yellow); font-size: 15px; }
+
+        /* Badges de groupe & trophées */
+        .group-badge {
+            background-color: #20334e;
+            color: #94a3b8;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
         }
 
-        .rank-number {
-            font-weight: bold;
-            color: var(--accent-yellow);
-            width: 40px;
-        }
-
-        .badge-points {
-            font-weight: bold;
-            color: var(--color-win);
+        .star-container {
+            color: #f1c40f;
+            font-size: 12px;
+            margin-left: 4px;
         }
     </style>
 </head>
@@ -307,11 +223,11 @@
 
 <div class="dashboard">
     <h1 class="gold-title">World Cup 2026</h1>
-    <div class="subtitle">Statistiques d'analyse prédictive et performances historiques mondiales</div>
+    <div class="subtitle">Tableau de bord d'analyses prédictives et d'historiques de la Coupe du Monde</div>
 
     <div class="tabs-container">
         <button class="tab-btn active" onclick="switchTab('h2h-view', this)">⚔️ Face à Face</button>
-        <button class="tab-btn" onclick="switchTab('ranking-view', this)">📊 Classement Général</button>
+        <button class="tab-btn" onclick="switchTab('ranking-view', this)">📊 Classement Coupe du Monde</button>
     </div>
 
     <div id="h2h-view" class="view-section active">
@@ -330,7 +246,7 @@
                 <div class="card-title">Total des matchs joués</div>
                 <div class="total-box">
                     <div class="total-number" id="totalMatches">0</div>
-                    <div style="color: var(--text-muted); margin-top: 15px;">Matchs enregistrés dans l'historique</div>
+                    <div style="color: var(--text-muted); margin-top: 15px;">Matchs enregistrés</div>
                 </div>
             </div>
 
@@ -364,16 +280,19 @@
 
     <div id="ranking-view" class="view-section">
         <div class="ranking-card">
-            <div class="card-title">Classement mondial historique basé sur le CSV</div>
             <table class="ranking-table">
                 <thead>
                     <tr>
-                        <th>Rang</th>
-                        <th>Sélection</th>
-                        <th>Matchs</th>
-                        <th>V — N — D</th>
-                        <th>Buts</th>
-                        <th>Points Globaux</th>
+                        <th class="rank-col">Rang</th>
+                        <th class="align-left">Sélection</th>
+                        <th class="pts-col">Pts</th>
+                        <th>J.</th>
+                        <th>G.</th>
+                        <th>N.</th>
+                        <th>P.</th>
+                        <th class="hide-mobile">Bp</th>
+                        <th class="hide-mobile">Bc</th>
+                        <th>Diff.</th>
                     </tr>
                 </thead>
                 <tbody id="rankingTableBody">
