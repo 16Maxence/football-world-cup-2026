@@ -88,6 +88,8 @@
             border-radius: 8px;
             padding: 25px;
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
         }
 
         .card-title {
@@ -103,7 +105,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100%;
+            flex-grow: 1;
             min-height: 250px;
         }
 
@@ -164,13 +166,60 @@
             font-size: 11px;
             color: var(--text-muted);
         }
+
+        /* Liste des scores réels */
+        .history-list {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .history-item {
+            background-color: #0d1b2a;
+            padding: 12px 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            border-left: 4px solid transparent;
+        }
+
+        .history-item.win { border-left-color: var(--color-win); }
+        .history-item.draw { border-left-color: var(--color-draw); }
+        .history-item.loss { border-left-color: var(--color-loss); }
+
+        .match-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .match-teams {
+            font-weight: 500;
+        }
+        
+        .match-score {
+            font-weight: bold;
+            background-color: #152238;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: var(--accent-yellow);
+            letter-spacing: 2px;
+            font-family: monospace;
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
     <h1>Historique de face à face</h1>
-    <div class="subtitle">Historique de confrontations directes entre deux sélections</div>
+    <div class="subtitle">Historique de confrontations directes réelles et statistiques prédictives</div>
 
     <div class="selector-zone">
         <select id="teamA" onchange="chargerAdversaires()">
@@ -187,7 +236,7 @@
             <div class="card-title">Total des matchs joués</div>
             <div class="total-box">
                 <div class="total-number" id="totalMatches">0</div>
-                <div style="color: var(--text-muted); margin-top: 15px;">Matchs dans l'historique</div>
+                <div style="color: var(--text-muted); margin-top: 15px;">Matchs enregistrés dans le CSV</div>
             </div>
         </div>
 
@@ -198,7 +247,7 @@
             </div>
 
             <div class="elo-section">
-                <div class="elo-header">🎯 Analyse des probabilités pour un match hypothétique</div>
+                <div class="elo-header">🎯 Analyse des probabilités théoriques du modèle</div>
                 <div class="prob-bar">
                     <div id="barWinA" class="prob-segment prob-win-a"></div>
                     <div id="barDraw" class="prob-segment prob-draw"></div>
@@ -209,6 +258,11 @@
                     <span>Match nul</span>
                     <span id="lblWinB">Victoire Équipe B</span>
                 </div>
+            </div>
+
+            <div class="elo-section" style="border-top: 1px solid #2c3e50; margin-top: 25px; padding-top: 15px;">
+                <div class="elo-header">📜 Vrais scores des dernières confrontations (CSV)</div>
+                <div id="matchHistoryList" class="history-list"></div>
             </div>
         </div>
     </div>
