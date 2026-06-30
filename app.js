@@ -7,6 +7,8 @@ let rankingCharts = {};
 const API_TOKEN = '310eb3d9be9e445996853b810f0dfdf6'; 
 const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
 const API_URL = PROXY_URL + 'https://api.football-data.org/v4/competitions/WC/matches';
+const API_STANDINGS_URL = PROXY_URL + 'https://api.football-data.org/v4/competitions/WC/standings';
+const API_SCORERS_URL = PROXY_URL + 'https://api.football-data.org/v4/competitions/WC/scorers';
 
 // Chargement initial des ressources locales
 async function loadData() {
@@ -229,6 +231,41 @@ function traiterEtAfficherDonneesWC(csvText) {
     creerBarChart('chartDiff', 'Diff.', [...listeEquipesCompletes].sort((a,b) => b.db - a.db).slice(0, 10), 'db', '#e67e22');
 }
 
+// ==========================================
+// INTEGRATION DU LIVE CLASSEMENT & BUTEURS VIA API
+// ==========================================
+async function loadLiveRankingAndScorers() {
+    const scorersBody = document.getElementById('scorersTableBody');
+    
+    // Appel pour les meilleurs buteurs (Scorers)
+    try {
+        const response = await fetch(API_SCORERS_URL, { headers: { 'X-Auth-Token': API_TOKEN } });
+        if (!response.ok) throw new Error("Plan gratuit restreint ou pas de données buteurs");
+        const data = await response.json();
+        
+        if (data.scorers && data.scorers.length > 0) {
+            scorersBody.innerHTML = '';
+            data.scorers.forEach((s, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td class="align-left" style="font-weight: bold;">${s.player.name}</td>
+                    <td class="align-left">${s.team.name}</td>
+                    <td style="font-weight: bold; color: var(--accent-yellow); font-size: 15px;">${s.goals}</td>
+                `;
+                scorersBody.appendChild(tr);
+            });
+        } else {
+            scorersBody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); padding: 20px;">Aucun buteur inscrit pour le moment.</td></tr>`;
+        }
+    } catch (err) {
+        console.warn(err);
+        scorersBody.innerHTML = `<tr><td colspan="4" style="color: var(--color-loss); padding: 15px; font-size: 12px;">⚠️ Indisponible sur le Free Tier API (Coupe du Monde).</td></tr>`;
+    }
+
+    // NOTE: L'appel /standings de football-data peut être greffé ici de la même façon pour écraser le tableau de gauche si la compétition a commencé !
+}
+
 function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
     const ctx = document.getElementById(canvasId).getContext('2d');
     if (rankingCharts[canvasId]) rankingCharts[canvasId].destroy();
@@ -271,21 +308,17 @@ function genererDonutChart(teamA, teamB, winA, draw, winB) {
 }
 
 // ==========================================
-// MOTEUR DE COMPARISON : MODELE VS REAlITE (API LIVE)
+// MOTEUR DE COMPARAISON : MODELE VS REALITE (API LIVE)
 // ==========================================
 async function loadApiBacktestData() {
     const container = document.getElementById('backtestMatchesContainer');
     if (!container) return;
 
     try {
-        const response = await fetch(API_URL, {
-            headers: { 'X-Auth-Token': API_TOKEN }
-        });
-        
+        const response = await fetch(API_URL, { headers: { 'X-Auth-Token': API_TOKEN } });
         if (!response.ok) throw new Error("Erreur de communication API");
         const data = await response.json();
         
-        // On isole les matchs de Coupe du Monde terminés (FINISHED)
         const finishedMatches = data.matches ? data.matches.filter(m => m.status === 'FINISHED') : [];
 
         if (finishedMatches.length === 0) {
