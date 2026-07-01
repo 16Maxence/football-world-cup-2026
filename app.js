@@ -3,9 +3,9 @@ let rawCsvMatches = [];
 let donutChartInstance = null;
 let rankingCharts = {};
 
-const API_TOKEN = '310eb3d9be9e445996853b810f0dfdf6'; 
-const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
-const API_URL = PROXY_URL + 'https://api.football-data.org/v4/competitions/WC/matches';
+// Configuration API-Football (v3)
+const API_KEY = '56271c2f05b54a26581f961769d5737e'; 
+const API_URL = 'https://v3.football.api-sports.io/fixtures?league=1&season=2026';
 
 // Chargement initial des ressources locales
 async function loadData() {
@@ -49,7 +49,7 @@ function genererTop5Vainqueurs() {
     const container = document.getElementById('top5Container');
     if (!container) return;
     
-    container.innerHTML = ''; // Nettoyage
+    container.innerHTML = ''; 
 
     top5Data.forEach(item => {
         const borderGold = item.rang === 1 ? 'border: 1px solid #bf953f; background: rgba(191, 149, 63, 0.08);' : 'border: 1px solid #2c3e50;';
@@ -323,30 +323,39 @@ function genererDonutChart(teamA, teamB, winA, draw, winB) {
     });
 }
 
+// APPEL DU FLUX LIVE ET COMPARAISON AVEC LES PRÉDICTIONS VIA TON TOKEN API-FOOTBALL
 async function loadApiBacktestData() {
     const container = document.getElementById('backtestMatchesContainer');
     if (!container) return;
 
     try {
-        const response = await fetch(API_URL, { headers: { 'X-Auth-Token': API_TOKEN } });
-        if (!response.ok) throw new Error("Erreur API");
-        const data = await response.json();
-        
-        const finishedMatches = data.matches ? data.matches.filter(m => m.status === 'FINISHED') : [];
+        const response = await fetch(API_URL, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': API_KEY,
+                'x-rapidapi-host': 'v3.football.api-sports.io'
+            }
+        });
 
-        if (finishedMatches.length === 0) {
-            container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Aucun match terminé retourné par l'API pour le moment.</div>`;
+        if (!response.ok) throw new Error("Erreur de communication avec API-Football");
+        const jsonResult = await response.json();
+        
+        // Extraction des matchs terminés (FT = Full Time)
+        const fixtures = jsonResult.response ? jsonResult.response.filter(f => f.fixture.status.short === 'FT') : [];
+
+        if (fixtures.length === 0) {
+            container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Aucun match récent terminé retourné par API-Football pour le moment (Saison 2026).</div>`;
             return;
         }
 
         container.innerHTML = '';
         let success = 0, warning = 0, error = 0;
 
-        finishedMatches.forEach(match => {
-            const homeTeam = match.homeTeam.name;
-            const awayTeam = match.awayTeam.name;
-            const homeScore = match.score.fullTime.home;
-            const awayScore = match.score.fullTime.away;
+        fixtures.forEach(item => {
+            const homeTeam = item.teams.home.name;
+            const awayTeam = item.teams.away.name;
+            const homeScore = item.goals.home;
+            const awayScore = item.goals.away;
 
             let realOutcome = 'DRAW';
             if (homeScore > awayScore) realOutcome = 'HOME_WIN';
@@ -391,7 +400,7 @@ async function loadApiBacktestData() {
             card.className = 'backtest-match-card';
             card.innerHTML = `
                 <div style="flex: 1;">
-                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Match Réel (API)</span>
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Flux Live API-Football</span>
                     <div style="font-size: 17px; font-weight: bold; margin-top: 4px;">${homeTeam} <span style="color: var(--accent-yellow);">${homeScore} - ${awayScore}</span> ${awayTeam}</div>
                 </div>
                 <div style="flex: 1; text-align: center; border-left: 1px solid #2c3e50; border-right: 1px solid #2c3e50; padding: 0 15px;">
@@ -413,27 +422,12 @@ async function loadApiBacktestData() {
         document.getElementById('countSuccess').textContent = success;
         document.getElementById('countWarning').textContent = warning;
         document.getElementById('countError').textContent = error;
+        MettreAJourBadgeStatut("Connecté API-Football");
 
     } catch (err) {
         console.error(err);
+        container.innerHTML = `<div style="color: #e74c3c; text-align: center; padding: 40px;">Erreur d'authentification ou limite atteinte sur API-Football.</div>`;
     }
 }
-
-// AUTOMATISATION : RAFFRAICHISSEMENT CSV UNIQUEMENT TOUTES LES 6 HEURES
-setInterval(async () => {
-    console.log("Mise à jour des données CSV locales...");
-    try {
-        const csvResponse = await fetch('./results.csv?cachebust=' + Date.now());
-        if (csvResponse.ok) {
-            const csvText = await csvResponse.text();
-            parseCsvData(csvText);
-        }
-        if(document.getElementById('backtest-view').classList.contains('active')) {
-            loadApiBacktestData();
-        }
-    } catch (e) {
-        console.error("Erreur lors du rafraîchissement d'arrière-plan :", e);
-    }
-}, 21600000);
 
 window.onload = loadData;
