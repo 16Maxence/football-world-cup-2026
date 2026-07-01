@@ -1,8 +1,8 @@
 let modelPredictions = {};
 let historicalCsvData = [];
 let donutChartInstance = null;
+let rankingChartInstance = null;
 
-// Données du Top 5 initiales (Or et Premium)
 const top5Data = [
     { rank: 1, team: "ARGENTINA", percentage: "18.4%", flag: "🇦🇷" },
     { rank: 2, team: "BRAZIL", percentage: "16.8%", flag: "🇧🇷" },
@@ -11,7 +11,7 @@ const top5Data = [
     { rank: 5, team: "GERMANY", percentage: "9.7%", flag: "🇩🇪" }
 ];
 
-// Structure exacte de l'arbre Eurosport (Miroir)
+// Arbre Miroir Eurosport (100% symétrique avec blocs SF gauche et droit branchés)
 const bracketStructure = {
     left: {
         R16: [
@@ -32,7 +32,7 @@ const bracketStructure = {
         ],
         SF: [
             { id: "L_SF_1", home: "", away: "", next: "F_FINAL", slot: "home" },
-            { id: "L_SF_2", home: "", away: "", next: "F_FINAL", slot: "away" } // Perdant ou gagnant selon règle, ici converge vers finale home/away
+            { id: "L_SF_2", home: "", away: "", next: "F_FINAL", slot: "home" } 
         ]
     },
     right: {
@@ -53,7 +53,8 @@ const bracketStructure = {
             { id: "R_QF_4", home: "", away: "", next: "R_SF_2", slot: "away" }
         ],
         SF: [
-            { id: "R_SF_1", home: "", away: "", next: "F_FINAL", slot: "away" } // Va alimenter le slot "away" de la finale
+            { id: "R_SF_1", home: "", away: "", next: "F_FINAL", slot: "away" },
+            { id: "R_SF_2", home: "", away: "", next: "F_FINAL", slot: "away" }
         ]
     },
     final: {
@@ -75,11 +76,11 @@ function initTop5Widget() {
         card.className = `top5-card ${item.rank === 1 ? 'rank-1' : ''}`;
         card.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-weight:900; color:${item.rank === 1 ? '#f1c40f' : '#6b7c96'}">#${item.rank}</span>
+                <span style="font-weight:900; color:${item.rank === 1 ? '#dfb75c' : '#6b7c96'}">#${item.rank}</span>
                 <span style="font-size:18px;">${item.flag}</span>
                 <span style="font-weight:700; font-size:13px; letter-spacing:0.5px;">${item.team}</span>
             </div>
-            <span style="font-weight:800; color:var(--accent-gold); font-size:13px;">${item.percentage}</span>
+            <span style="font-weight:800; color:#dfb75c; font-size:13px; text-shadow:0 0 5px rgba(223,183,92,0.3);">${item.percentage}</span>
         `;
         container.appendChild(card);
     });
@@ -95,10 +96,11 @@ async function loadProjectData() {
         parseHistoricalCsv(csvText);
 
         populateSelectorTeamA();
+        buildRankingChart();
         await parseAndBuild2026RealStats();
 
     } catch (err) {
-        console.error("Erreur d'initialisation des fichiers locaux :", err);
+        console.error("Erreur d'initialisation :", err);
     }
 }
 
@@ -118,16 +120,54 @@ function parseHistoricalCsv(text) {
     }
 }
 
+function buildRankingChart() {
+    const ctx = document.getElementById('canvasRanking').getContext('2d');
+    const sortedTeamsForChart = [...top5Data, 
+        { team: "SPAIN", percentage: "11.5%" },
+        { team: "GERMANY", percentage: "9.7%" },
+        { team: "PORTUGAL", percentage: "8.1%" },
+        { team: "NETHERLANDS", percentage: "7.4%" },
+        { team: "ENGLAND", percentage: "6.9%" },
+        { team: "ITALY", percentage: "5.2%" },
+        { team: "BELGIUM", percentage: "4.8%" }
+    ];
+
+    const labels = sortedTeamsForChart.map(t => t.team);
+    const dataVals = sortedTeamsForChart.map(t => parseFloat(t.percentage));
+
+    if (rankingChartInstance) rankingChartInstance.destroy();
+    rankingChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Indice de Performance Évalué (%)',
+                data: dataVals,
+                backgroundColor: labels.map((_, i) => i === 0 ? '#dfb75c' : '#1a2942'),
+                borderColor: '#384f73',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#6b7c96' } } },
+            scales: {
+                x: { ticks: { color: '#6b7c96' }, grid: { display: false } },
+                y: { ticks: { color: '#6b7c96' }, grid: { color: '#131c2e' } }
+            }
+        }
+    });
+}
+
 function populateSelectorTeamA() {
     const list = new Set();
     Object.values(modelPredictions).forEach(m => {
         if(m.team_a) list.add(m.team_a);
         if(m.team_b) list.add(m.team_b);
     });
-    const sorted = Array.from(list).sort();
     const selectA = document.getElementById('selectTeamA');
     selectA.innerHTML = '<option value="">Choisir Équipe A</option>';
-    sorted.forEach(t => {
+    Array.from(list).sort().forEach(t => {
         let o = document.createElement('option');
         o.value = t; o.textContent = t;
         selectA.appendChild(o);
@@ -189,12 +229,11 @@ function runSimulation() {
 
     buildDonutChart(tA, tB, pA, pD, pB);
 
-    // Logs Historiques
     const logs = document.getElementById('historyLogs');
     logs.innerHTML = '';
     const filtered = historicalCsvData.filter(m => (m.home === tA && m.away === tB) || (m.home === tB && m.away === tA));
     if(filtered.length === 0) {
-        logs.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:15px;">Aucune confrontation passée.</div>';
+        logs.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:15px;">Aucune confrontation passée.</div>';
         return;
     }
     filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(m => {
@@ -228,7 +267,7 @@ function buildDonutChart(tA, tB, pA, pD, pB) {
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'right', labels: { color: '#6b7c96', font: { size: 12 } } } },
+            plugins: { legend: { position: 'right', labels: { color: '#6b7c96' } } },
             cutout: '75%'
         }
     });
@@ -241,9 +280,6 @@ function changeTab(id, btn) {
     btn.classList.add('active');
 }
 
-// -------------------------------------------------------------------------
-// RE-CALCUL ET DESSIN DU BRACKET EN MIROIR STRICT (EUROSPORT)
-// -------------------------------------------------------------------------
 async function parseAndBuild2026RealStats() {
     let realList = [];
     try {
@@ -295,17 +331,15 @@ async function parseAndBuild2026RealStats() {
             predText = `Attendu : ${fav === 'HOME_WIN' ? m.home : (fav === 'AWAY_WIN' ? m.away : 'Nul')}`;
             if(fav === realOutcome) {
                 matchClass = 'badge-success'; matchResultText = 'Succès'; success++;
-            } else {
-                error++;
-            }
+            } else { error++; }
         } else { error++; }
 
         const r = document.createElement('div');
         r.className = 'match-row-card';
         r.innerHTML = `
             <div>
-                <span style="font-size:11px; color:var(--text-muted);">MATCH RÉEL 2026</span>
-                <div style="font-weight:700; font-size:15px; margin-top:3px;">${m.home} <span style="color:var(--accent-gold);">${m.home_score} - ${m.away_score}</span> ${m.away}</div>
+                <span style="font-size:11px; color:var(--text-muted);">MONDIAL 2026 — ANALYSE</span>
+                <div style="font-weight:700; font-size:15px; margin-top:3px;">${m.home} <span style="color:#dfb75c;">${m.home_score} - ${m.away_score}</span> ${m.away}</div>
             </div>
             <div style="font-size:13px; font-weight:500;">${predText}</div>
             <span class="badge ${matchClass}">${matchResultText}</span>
@@ -318,19 +352,17 @@ async function parseAndBuild2026RealStats() {
     document.getElementById('valSuccess').textContent = success;
     document.getElementById('valError').textContent = error;
 
-    // Lancement du chaînage de l'arbre
+    document.getElementById('syncStatusBar').textContent = "Système d'analyse prédictive synchronisé — Données de match à jour";
+
     computeAndRenderMirrorBracket(realList);
 }
 
 function computeAndRenderMirrorBracket(realMatches) {
     const findScore = (h, a) => realMatches.find(m => (m.home === h && m.away === a) || (m.home === a && m.away === h));
-
-    // Cloner la structure pour éviter les effets de bord
     const workingTree = JSON.parse(JSON.stringify(bracketStructure));
 
-    // Étape 1 : Aligner et calculer le Bloc Gauche et Bloc Droite (R16 -> QF -> SF)
     ['left', 'right'].forEach(side => {
-        // Huitièmes (R16)
+        // Huitièmes
         workingTree[side].R16.forEach(match => {
             const res = findScore(match.home, match.away);
             if(res) {
@@ -339,7 +371,6 @@ function computeAndRenderMirrorBracket(realMatches) {
                 match.away_score = isInv ? res.home_score : res.away_score;
                 match.winner = match.home_score > match.away_score ? match.home : match.away;
 
-                // Propager au Quart correspondant
                 if(match.winner && match.next) {
                     const nextMatch = workingTree[side].QF.find(q => q.id === match.next);
                     if(nextMatch) nextMatch[match.slot] = match.winner;
@@ -347,7 +378,7 @@ function computeAndRenderMirrorBracket(realMatches) {
             }
         });
 
-        // Quarts (QF)
+        // Quarts
         workingTree[side].QF.forEach(match => {
             const res = findScore(match.home, match.away);
             if(res) {
@@ -356,7 +387,6 @@ function computeAndRenderMirrorBracket(realMatches) {
                 match.away_score = isInv ? res.home_score : res.away_score;
                 match.winner = match.home_score > match.away_score ? match.home : match.away;
 
-                // Propager à la Demi correspondant
                 if(match.winner && match.next) {
                     const nextMatch = workingTree[side].SF.find(s => s.id === match.next);
                     if(nextMatch) nextMatch[match.slot] = match.winner;
@@ -364,7 +394,7 @@ function computeAndRenderMirrorBracket(realMatches) {
             }
         });
 
-        // Demis (SF)
+        // Demi-finales (SF)
         workingTree[side].SF.forEach(match => {
             const res = findScore(match.home, match.away);
             if(res) {
@@ -373,7 +403,6 @@ function computeAndRenderMirrorBracket(realMatches) {
                 match.away_score = isInv ? res.home_score : res.away_score;
                 match.winner = match.home_score > match.away_score ? match.home : match.away;
 
-                // Propager à la finale centrale unifiée
                 if(match.winner && match.next) {
                     workingTree.final[match.next][match.slot] = match.winner;
                 }
@@ -381,7 +410,7 @@ function computeAndRenderMirrorBracket(realMatches) {
         });
     });
 
-    // Étape 2 : Calculer le score de la finale unifiée
+    // Finale
     const finalMatch = workingTree.final.F_FINAL;
     const finalRes = findScore(finalMatch.home, finalMatch.away);
     if(finalRes) {
@@ -391,7 +420,6 @@ function computeAndRenderMirrorBracket(realMatches) {
         finalMatch.winner = finalMatch.home_score > finalMatch.away_score ? finalMatch.home : finalMatch.away;
     }
 
-    // Étape 3 : Injection du DOM en respectant l'ordre Eurosport Miroir
     renderDOMColumn(workingTree.left.R16, 'col_R16_Left');
     renderDOMColumn(workingTree.left.QF, 'col_QF_Left');
     renderDOMColumn(workingTree.left.SF, 'col_SF_Left');
@@ -400,7 +428,6 @@ function computeAndRenderMirrorBracket(realMatches) {
     renderDOMColumn(workingTree.right.QF, 'col_QF_Right');
     renderDOMColumn(workingTree.right.SF, 'col_SF_Right');
 
-    // Box finale centrale
     const finalZone = document.getElementById('col_Final_Zone');
     finalZone.innerHTML = '';
     finalZone.appendChild(buildMatchCardDOM(finalMatch));
@@ -408,10 +435,9 @@ function computeAndRenderMirrorBracket(realMatches) {
 
 function renderDOMColumn(matchArray, columnId) {
     const col = document.getElementById(columnId);
-    // On conserve le titre de la colonne
+    if (!col) return;
     const titleHtml = col.querySelector('.column-title').outerHTML;
     col.innerHTML = titleHtml;
-
     matchArray.forEach(m => {
         col.appendChild(buildMatchCardDOM(m));
     });
