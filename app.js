@@ -3,10 +3,6 @@ let rawCsvMatches = [];
 let donutChartInstance = null;
 let rankingCharts = {};
 
-// Configuration API-Football (v3)
-const API_KEY = '56271c2f05b54a26581f961769d5737e'; 
-const API_URL = 'https://v3.football.api-sports.io/fixtures?league=1&season=2026';
-
 // Chargement initial des ressources locales
 async function loadData() {
     try {
@@ -30,6 +26,9 @@ async function loadData() {
         // Affiche le Top 5 horizontal sous le titre
         genererTop5Vainqueurs();
         MettreAJourBadgeStatut("Sécurisé (CSV local)");
+
+        // Initialise également l'onglet de backtest/réalité au chargement
+        loadApiBacktestData();
 
     } catch (error) {
         console.error("Erreur critique lors de l'initialisation :", error);
@@ -279,11 +278,14 @@ function traiterEtAfficherDonneesWC(csvText) {
 
 function MettreAJourBadgeStatut(statut) {
     const maintenant = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('syncTimeStatus').textContent = `Mode : ${statut} à ${maintenant}`;
+    const el = document.getElementById('syncTimeStatus');
+    if (el) el.textContent = `Mode : ${statut} à ${maintenant}`;
 }
 
 function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
-    const ctx = document.getElementById(canvasId).getContext('2d');
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     if (rankingCharts[canvasId]) rankingCharts[canvasId].destroy();
 
     rankingCharts[canvasId] = new Chart(ctx, {
@@ -305,8 +307,11 @@ function creerBarChart(canvasId, labelLabel, dataList, objectKey, color) {
     });
 }
 
+// Génère la jauge ronde de répartition
 function genererDonutChart(teamA, teamB, winA, draw, winB) {
-    const ctx = document.getElementById('donutChart').getContext('2d');
+    const canvas = document.getElementById('donutChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     if (donutChartInstance) donutChartInstance.destroy();
     donutChartInstance = new Chart(ctx, {
         type: 'doughnut',
@@ -323,111 +328,127 @@ function genererDonutChart(teamA, teamB, winA, draw, winB) {
     });
 }
 
-// APPEL DU FLUX LIVE ET COMPARAISON AVEC LES PRÉDICTIONS VIA TON TOKEN API-FOOTBALL
+// CHARGEMENT ET TRAITEMENT DES DONNÉES DU CSV RÉEL (Mondial 2026)
 async function loadApiBacktestData() {
     const container = document.getElementById('backtestMatchesContainer');
     if (!container) return;
 
+    let realMatches = [];
+
     try {
-        const response = await fetch(API_URL, {
-            method: 'GET',
-            headers: {
-                'x-rapidapi-key': API_KEY,
-                'x-rapidapi-host': 'v3.football.api-sports.io'
-            }
-        });
-
-        if (!response.ok) throw new Error("Erreur de communication avec API-Football");
-        const jsonResult = await response.json();
+        const response = await fetch('./real_results_2026.csv');
+        if (!response.ok) throw new Error("Fichier real_results_2026.csv introuvable.");
         
-        // Extraction des matchs terminés (FT = Full Time)
-        const fixtures = jsonResult.response ? jsonResult.response.filter(f => f.fixture.status.short === 'FT') : [];
+        const csvText = await response.text();
+        const lines = csvText.split('\n');
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const cols = lines[i].split(',');
+            if (cols.length >= 5) {
+                realMatches.push({
+                    date: cols[0].trim(),
+                    home: cols[1].trim(),
+                    away: cols[2].trim(),
+                    home_score: parseInt(cols[3].trim()),
+                    away_score: parseInt(cols[4].trim())
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Erreur de chargement des résultats 2026 :", err);
+        container.innerHTML = `<div style="color:var(--text-muted); padding:20px; text-align:center;">Fichier 'real_results_2026.csv' manquant ou vide.</div>`;
+        return;
+    }
 
-        if (fixtures.length === 0) {
-            container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Aucun match récent terminé retourné par API-Football pour le moment (Saison 2026).</div>`;
-            return;
+    if (realMatches.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-muted); padding:20px; text-align:center;">Aucun match disponible dans le fichier local.</div>`;
+        return;
+    }
+
+    container.innerHTML = '';
+    let success = 0, warning = 0, error = 0;
+
+    realMatches.forEach(item => {
+        const homeTeam = item.home;
+        const awayTeam = item.away;
+        const homeScore = item.home_score;
+        const awayScore = item.away_score;
+
+        let realOutcome = 'DRAW';
+        if (homeScore > awayScore) realOutcome = 'HOME_WIN';
+        if (homeScore < awayScore) realOutcome = 'AWAY_WIN';
+
+        let key = `${homeTeam}-${awayTeam}`;
+        let isInverted = false;
+        
+        if (!matchPredictData[key]) {
+            key = `${awayTeam}-${homeTeam}`;
+            isInverted = true;
         }
 
-        container.innerHTML = '';
-        let success = 0, warning = 0, error = 0;
+        const pred = matchPredictData[key];
+        let badgeClass = 'status-warning';
+        let badgeTxt = 'Nuancé';
+        let predTxt = 'Modèle non calculé';
 
-        fixtures.forEach(item => {
-            const homeTeam = item.teams.home.name;
-            const awayTeam = item.teams.away.name;
-            const homeScore = item.goals.home;
-            const awayScore = item.goals.away;
+        if (pred) {
+            const probT1 = isInverted ? pred.stats.prob_team2 : pred.stats.prob_team1;
+            const probT2 = isInverted ? pred.stats.prob_team1 : pred.stats.prob_team2;
+            const probD  = pred.stats.prob_draw;
 
-            let realOutcome = 'DRAW';
-            if (homeScore > awayScore) realOutcome = 'HOME_WIN';
-            if (homeScore < awayScore) realOutcome = 'AWAY_WIN';
+            let modelFavorite = 'DRAW';
+            if (probT1 > probT2 && probT1 > probD) modelFavorite = 'HOME_WIN';
+            if (probT2 > probT1 && probT2 > probD) modelFavorite = 'AWAY_WIN';
 
-            let key = `${homeTeam}-${awayTeam}`;
-            let isInverted = false;
-            
-            if (!matchPredictData[key]) {
-                key = `${awayTeam}-${homeTeam}`;
-                isInverted = true;
-            }
+            predTxt = `Attendu : ${modelFavorite === 'HOME_WIN' ? homeTeam : (modelFavorite === 'AWAY_WIN' ? awayTeam : 'Match Nul')} (${Math.max(probT1, probT2, probD)}%)`;
 
-            const pred = matchPredictData[key];
-            let badgeClass = 'status-warning';
-            let badgeTxt = 'Nuancé';
-            let predTxt = 'Modèle non calculé';
-
-            if (pred) {
-                const probT1 = isInverted ? pred.stats.prob_team2 : pred.stats.prob_team1;
-                const probT2 = isInverted ? pred.stats.prob_team1 : pred.stats.prob_team2;
-                const probD  = pred.stats.prob_draw;
-
-                let modelFavorite = 'DRAW';
-                if (probT1 > probT2 && probT1 > probD) modelFavorite = 'HOME_WIN';
-                if (probT2 > probT1 && probT2 > probD) modelFavorite = 'AWAY_WIN';
-
-                predTxt = `Attendu : ${modelFavorite === 'HOME_WIN' ? homeTeam : (modelFavorite === 'AWAY_WIN' ? awayTeam : 'Match Nul')} (${Math.max(probT1, probT2, probD)}%)`;
-
-                if (modelFavorite === realOutcome) {
-                    badgeClass = 'status-success'; badgeTxt = 'Succès'; success++;
-                } else if (Math.abs(probT1 - probT2) < 15 && realOutcome !== 'DRAW') {
-                    badgeClass = 'status-warning'; badgeTxt = 'Nuancé'; warning++;
-                } else {
-                    badgeClass = 'status-error'; badgeTxt = 'Surprise'; error++;
-                }
+            if (modelFavorite === realOutcome) {
+                badgeClass = 'status-success'; badgeTxt = 'Succès'; success++;
+            } else if (Math.abs(probT1 - probT2) < 15 && realOutcome !== 'DRAW') {
+                badgeClass = 'status-warning'; badgeTxt = 'Nuancé'; warning++;
             } else {
-                warning++;
+                badgeClass = 'status-error'; badgeTxt = 'Surprise'; error++;
             }
+        } else {
+            predTxt = "Attendu : Équilibré / Inconnu";
+            badgeClass = 'status-warning'; warning++;
+        }
 
-            const card = document.createElement('div');
-            card.className = 'backtest-match-card';
-            card.innerHTML = `
-                <div style="flex: 1;">
-                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Flux Live API-Football</span>
-                    <div style="font-size: 17px; font-weight: bold; margin-top: 4px;">${homeTeam} <span style="color: var(--accent-yellow);">${homeScore} - ${awayScore}</span> ${awayTeam}</div>
-                </div>
-                <div style="flex: 1; text-align: center; border-left: 1px solid #2c3e50; border-right: 1px solid #2c3e50; padding: 0 15px;">
-                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Prédiction</div>
-                    <div style="font-weight: 500; margin-top: 4px; font-size: 13px;">${predTxt}</div>
-                </div>
-                <div style="flex: 0; padding-left: 20px; text-align: right;">
-                    <span class="status-badge ${badgeClass}">${badgeTxt}</span>
-                </div>
-            `;
-            container.appendChild(card);
-        });
+        const card = document.createElement('div');
+        card.className = 'backtest-match-card';
+        card.innerHTML = `
+            <div style="flex: 1;">
+                <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Mondial 2026 — Réel</span>
+                <div style="font-size: 16px; font-weight: bold; margin-top: 4px;">${homeTeam} <span style="color: var(--accent-yellow);">${homeScore} - ${awayScore}</span> ${awayTeam}</div>
+            </div>
+            <div style="flex: 1; text-align: center; border-left: 1px solid #2c3e50; border-right: 1px solid #2c3e50; padding: 0 15px;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Prédiction du Modèle</div>
+                <div style="font-weight: 500; margin-top: 4px; font-size: 13px;">${predTxt}</div>
+            </div>
+            <div style="flex: 0; padding-left: 20px; text-align: right;">
+                <span class="status-badge ${badgeClass}">${badgeTxt}</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
 
-        const totalCalculated = success + warning + error;
-        const accuracyPct = totalCalculated > 0 ? ((success / totalCalculated) * 100).toFixed(1) : 0;
+    const totalCalculated = success + warning + error;
+    const accuracyPct = totalCalculated > 0 ? ((success / totalCalculated) * 100).toFixed(1) : 0;
 
-        document.getElementById('globalAccuracy').textContent = `${accuracyPct}%`;
-        document.getElementById('accuracySub').textContent = `Sur ${totalCalculated} matchs analysés`;
-        document.getElementById('countSuccess').textContent = success;
-        document.getElementById('countWarning').textContent = warning;
-        document.getElementById('countError').textContent = error;
-        MettreAJourBadgeStatut("Connecté API-Football");
+    const elAccuracy = document.getElementById('globalAccuracy');
+    const elSub = document.getElementById('accuracySub');
+    const elSuccess = document.getElementById('countSuccess');
+    const elWarning = document.getElementById('countWarning');
+    const elError = document.getElementById('countError');
 
-    } catch (err) {
-        console.error(err);
-        container.innerHTML = `<div style="color: #e74c3c; text-align: center; padding: 40px;">Erreur d'authentification ou limite atteinte sur API-Football.</div>`;
-    }
+    if (elAccuracy) elAccuracy.textContent = `${accuracyPct}%`;
+    if (elSub) elSub.textContent = `Sur ${totalCalculated} matchs terminés`;
+    if (elSuccess) elSuccess.textContent = success;
+    if (elWarning) elWarning.textContent = warning;
+    if (elError) elError.textContent = error;
+    
+    MettreAJourBadgeStatut("Résultats réels locaux (FIFA 2026)");
 }
 
 window.onload = loadData;
